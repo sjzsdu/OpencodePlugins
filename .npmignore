@@ -1,0 +1,30 @@
+# Dependencies (users install these)
+node_modules
+
+# Development files
+.git
+.gitignore
+.vscode
+.idea
+
+# Docs
+docs/
+README.md
+
+# Config files that shouldn't be in package
+tsconfig.json
+bun.lockb
+*.lock
+
+# Test files
+*.test.ts
+__tests__/
+
+# IDE
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
