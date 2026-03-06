@@ -1,5 +1,5 @@
 {
-  "name": "@emperor/opencode-plugin",
+  "name": "opencode-plugin-emperor",
   "version": "0.1.0",
   "description": "Emperor — 三省六部多智能体协作系统 OpenCode 插件",
   "main": ".opencode/plugins/emperor/index.ts",
@@ -34,7 +34,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sunjuzhong/emperor.git"
+    "url": "git+https://github.com/sjzsdu/emperor.git"
   },
   "author": "sunjuzhong",
   "license": "MIT"
