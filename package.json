@@ -1,6 +1,6 @@
 {
   "name": "opencode-plugin-emperor",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Emperor — 三省六部多智能体协作系统 OpenCode 插件",
   "main": ".opencode/plugins/emperor/index.ts",
   "types": ".opencode/plugins/emperor/index.ts",
@@ -10,8 +10,7 @@
   },
   "files": [
     ".opencode/plugins/emperor/**/*.ts",
-    ".opencode/plugins/emperor/skills/**/*",
-    ".opencode/emperor.json"
+    ".opencode/plugins/emperor/skills/**/*"
   ],
   "peerDependencies": {
     "@opencode-ai/plugin": ">=1.2.0"
