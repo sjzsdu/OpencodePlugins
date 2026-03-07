@@ -1,6 +1,6 @@
 import type { Plugin } from "@opencode-ai/plugin"
-import path from "path"
-import { fileURLToPath } from "url"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
 import { loadConfig } from "./config"
 import { JsonEdictStore } from "./store"
 import { PROMPTS } from "./agents/prompts"

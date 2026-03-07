@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs"
-import { join } from "path"
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs"
+import { join } from "node:path"
 import type { Edict, EdictStore, EdictStatus } from "./types"
 
 function randomHex(bytes: number): string {
