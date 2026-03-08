@@ -56,7 +56,7 @@ export const EmperorPlugin: Plugin = async ({ client, directory }) => {
       }
     },
     tool: {
-      "edict": createEdictTool(client, store, config),
+      "edict": createEdictTool(client, store, config, directory),
       "memorial": createMemorialTool(store),
       "halt": createHaltTool(client, store),
     },

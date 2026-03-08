@@ -116,6 +116,7 @@ export async function reviewWithMenxia(
   plan: Plan,
   sensitivePatterns: string[],
   mandatoryDepartments: DepartmentId[] = [],
+  projectContext?: string,
 ): Promise<Review> {
   // Pre-check: mandatory department enforcement (code-level, before AI review)
   const missingDepts = checkMandatoryDepartments(plan, mandatoryDepartments)
@@ -144,8 +145,12 @@ export async function reviewWithMenxia(
   })
   const sessionId = session.data!.id
 
-  const prompt = `请审核以下旨意的规划方案。
+  const contextBlock = projectContext
+    ? `\n## 项目上下文摘要（锦衣卫侦察报告）\n${projectContext}\n`
+    : ""
 
+  const prompt = `请审核以下旨意的规划方案。
+${contextBlock}
 ## 旨意
 标题: ${edict.title}
 内容: ${edict.content}
@@ -160,6 +165,7 @@ ${JSON.stringify(plan, null, 2)}
 3. **测试覆盖**：方案是否包含户部（hubu）的测试验证任务？
 4. **完备性**：所有需求点是否都有对应子任务？
 5. **风险识别**：安全、兼容性、性能风险是否被充分识别？
+6. **与现有代码的一致性**：方案是否与项目现有架构和规范一致？
 
 请严格按照你的审核标准进行评审，输出符合 Review 接口的 JSON。`
 

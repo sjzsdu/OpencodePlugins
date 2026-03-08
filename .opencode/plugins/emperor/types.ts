@@ -3,6 +3,7 @@ import type { AgentConfig } from "@opencode-ai/sdk"
 /** Status union type — the state machine */
 export type EdictStatus =
   | "received"       // 太子分拣完毕，进入流程
+  | "reconnaissance" // 锦衣卫侦察中
   | "planning"       // 中书省规划中
   | "reviewing"      // 门下省审核中
   | "needs_approval" // 敏感操作，等待用户确认
@@ -28,6 +29,7 @@ export interface Edict {
   review?: Review
   executions: Execution[]
   memorial?: string
+  projectContext?: string
 }
 
 export interface Plan {
@@ -80,6 +82,10 @@ export interface EmperorConfig {
     sensitivePatterns: string[]
     mandatoryDepartments: DepartmentId[]
     requirePostVerification: boolean
+  }
+  recon: {
+    enabled: boolean
+    cacheDir: string
   }
   store: {
     dataDir: string

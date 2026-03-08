@@ -7,7 +7,8 @@
 ```mermaid
 graph TD
     User["用户下旨"] --> Taizi["太子<br/>统筹分诊"]
-    Taizi --> Zhongshu["中书省<br/>拟定方案"]
+    Taizi --> Jinyiwei["锦衣卫<br/>项目侦察"]
+    Jinyiwei --> Zhongshu["中书省<br/>拟定方案"]
     Zhongshu --> Menxia["门下省<br/>审核封驳"]
     Menxia -->|驳回| Zhongshu
     Menxia -->|通过| Shangshu["尚书省<br/>执行总调度"]
@@ -24,17 +25,20 @@ graph TD
     Xingbu --> Memorial
     Gongbu --> Memorial
     Memorial --> Taizi
+    Jinyiwei -.->|项目上下文| Zhongshu
+    Jinyiwei -.->|摘要| Menxia
 ```
 
-**完整流程**：用户下旨 → 太子分诊 → 中书省规划 → 门下省审核 → 尚书省调度 → 六部并行执行 → 尚书省汇总奏折 → 太子验收
+**完整流程**：用户下旨 → 太子分诊 → 锦衣卫侦察 → 中书省规划 → 门下省审核 → 尚书省调度 → 六部并行执行 → 尚书省汇总奏折 → 太子验收
 
 **核心规则**：太子只与三省（中书省、门下省、尚书省）沟通，绝不直接找六部派活。
 
-## 十部 Agent
+## 十一部 Agent
 
 | Agent | 角色 | 职责 |
 |-------|------|------|
 | **太子** (taizi) | 分诊官 | 接收用户请求，分析任务性质，只与三省沟通 |
+| **锦衣卫** (jinyiwei) | 侦察官 | 扫描项目代码，生成架构图和上下文报告，为规划提供情报 |
 | **中书省** (zhongshu) | 规划师 | 将任务拆解为子任务，分配给对应六部，输出结构化 JSON 方案 |
 | **门下省** (menxia) | 审查官 | 审核中书省方案的合理性、风险和依赖关系，可封驳退回 |
 | **尚书省** (shangshu) | 执行总调度 | 接收审核通过的方案，调度六部并行执行，监控进度，汇总奏折 |
@@ -101,6 +105,7 @@ graph TD
 {
   "agents": {
     "taizi": { "model": "anthropic/claude-sonnet-4-20250514" },
+    "jinyiwei": { "model": "anthropic/claude-sonnet-4-20250514" },
     "zhongshu": { "model": "anthropic/claude-sonnet-4-20250514" },
     "menxia": { "model": "anthropic/claude-sonnet-4-20250514" },
     "shangshu": { "model": "anthropic/claude-sonnet-4-20250514" },
@@ -117,6 +122,10 @@ graph TD
     "sensitivePatterns": ["删除", "drop", "rm -rf", "production", "密钥", "credentials"],
     "mandatoryDepartments": ["hubu"],
     "requirePostVerification": true
+  },
+  "recon": {
+    "enabled": true,
+    "cacheDir": "recon"
   },
   "store": {
     "dataDir": ".opencode/emperor-data"
@@ -136,6 +145,8 @@ graph TD
 - **pipeline.mandatoryDepartments**: 强制参与的部门列表（默认 `["hubu"]`），中书省方案中必须包含这些部门，否则门下省将自动驳回
 - **pipeline.requirePostVerification**: 是否在六部执行完成后进行户部后置验证（默认 `true`）
 - **store.dataDir**: 圣旨数据持久化目录
+- **recon.enabled**: 是否启用锦衣卫侦察（默认 `true`）。禁用后跳过 Phase 0，不注入项目上下文
+- **recon.cacheDir**: 侦察报告缓存目录（相对于 store.dataDir），按 git hash 缓存，同一提交不重复扫描
 
 ## 使用方式
 
@@ -176,6 +187,23 @@ graph TD
 1. 标记为敏感操作
 2. 弹出确认对话框，需用户手动批准
 3. 用户可选择批准或驳回
+
+### 锦衣卫侦察（Phase 0）
+
+每次下旨执行前，锦衣卫会先扫描项目代码，生成包含 mermaid 图表的结构化报告：
+
+1. **技术栈识别**：语言、框架、构建工具、包管理器
+2. **目录结构分析**：模块划分、入口文件、配置位置
+3. **架构模式识别**：设计模式、分层架构、数据流
+4. **依赖关系图**：mermaid 模块依赖图
+5. **功能地图**：与旨意相关的功能模块详细分析
+
+**分层注入**（控制 token 成本）：
+- 完整报告 → 中书省（规划需要全貌了解）
+- 摘要报告 → 门下省（审核只需关键信息）
+- 不注入 → 尚书省、六部（避免 token 浪费）
+
+**智能缓存**：结果按 git hash 缓存，同一提交不重复扫描，大幅降低成本。
 
 ### 强制部门参与
 
@@ -218,14 +246,15 @@ graph TD
     ├── config.ts                        # 配置加载器
     ├── store.ts                         # 圣旨数据持久化
     ├── agents/
-    │   └── prompts.ts                   # 十部 Agent 系统提示词
+    │   └── prompts.ts                   # 十一部 Agent 系统提示词
     ├── skills/                          # 插件内置 Skills
     │   ├── taizi-reloaded/              # 太子增强版（判断-执行分离）
     │   ├── quick-verify/                # 快速验证技能
     │   ├── hubu-tester/                 # 户部测试官
     │   └── menxia-reviewer/             # 门下省审核官
     ├── engine/
-    │   ├── pipeline.ts                  # 流转引擎主流程（含尚书省调度）
+    │   ├── pipeline.ts                  # 流转引擎主流程（含锦衣卫侦察 + 尚书省调度）
+    │   ├── recon.ts                     # 锦衣卫侦察引擎（git-hash 缓存 + 分层注入）
     │   ├── reviewer.ts                  # 门下省审核 + 强制部门检查 + 敏感操作检测
     │   └── dispatcher.ts               # 六部调度（拓扑排序 + 并行执行）
     └── tools/

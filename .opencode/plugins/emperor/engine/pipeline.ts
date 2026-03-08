@@ -4,6 +4,7 @@ import type { ToolContext } from "@opencode-ai/plugin"
 import type { Edict, EdictStore, EmperorConfig, Execution, Plan } from "../types"
 import { reviewWithMenxia } from "./reviewer"
 import { dispatchAndExecute, executeSubtask } from "./dispatcher"
+import { reconWithJinyiwei } from "./recon"
 
 const DEPT_DISPLAY: Record<string, string> = {
   bingbu: "兵部",
@@ -64,6 +65,7 @@ export async function planWithZhongshu(
   edict: Edict,
   attempt: number,
   rejectionReasons?: string[],
+  projectContext?: string,
 ): Promise<Plan> {
   const session = await client.session.create({
     body: { title: `中书省·${edict.title}` },
@@ -71,9 +73,13 @@ export async function planWithZhongshu(
   const sessionId = session.data!.id
 
   let prompt: string
+  const contextBlock = projectContext
+    ? `\n## 项目上下文（锦衣卫侦察报告）\n${projectContext}\n`
+    : ""
+
   if (attempt === 1) {
     prompt = `请规划以下旨意，拆解为可执行的子任务。
-
+${contextBlock}
 标题: ${edict.title}
 内容: ${edict.content}
 优先级: ${edict.priority}
@@ -82,6 +88,7 @@ export async function planWithZhongshu(
 1. 请先分析用户场景和技术选型，再拆解子任务
 2. 必须包含户部（hubu）测试验证任务
 3. 技术选型需说明理由，优先考虑用户体验
+4. 如果有项目上下文，请充分利用已有代码结构和技术栈信息
 
 请输出严格的 Plan JSON。`
   } else {
@@ -89,7 +96,7 @@ export async function planWithZhongshu(
 ${rejectionReasons?.map((r) => `- ${r}`).join("\n") ?? "（无具体原因）"}
 
 请重新规划以下旨意（第 ${attempt} 次尝试）：
-
+${contextBlock}
 标题: ${edict.title}
 内容: ${edict.content}
 优先级: ${edict.priority}
@@ -98,6 +105,7 @@ ${rejectionReasons?.map((r) => `- ${r}`).join("\n") ?? "（无具体原因）"}
 1. 请认真对待封驳原因，针对性改进
 2. 必须包含户部（hubu）测试验证任务
 3. 技术选型需说明理由，优先考虑用户体验
+4. 如果有项目上下文，请充分利用已有代码结构和技术栈信息
 
 请输出严格的 Plan JSON，注意改进被指出的问题。`
   }
@@ -289,9 +297,19 @@ export async function runPipeline(
   client: OpencodeClient,
   store: EdictStore,
   config: EmperorConfig,
+  directory: string,
 ): Promise<string> {
   let plan: Plan | undefined
   let rejectionReasons: string[] | undefined
+
+  // ========================================
+  // Phase 0: 锦衣卫 Reconnaissance
+  // ========================================
+  store.update(edict.id, { status: "reconnaissance" })
+  const recon = await reconWithJinyiwei(client, edict, config, directory)
+  if (recon.fullContext) {
+    store.update(edict.id, { projectContext: recon.fullContext })
+  }
 
   // ========================================
   // Phase 1: 中书省 Planning + 门下省 Review
@@ -305,7 +323,7 @@ export async function runPipeline(
     client.tui.showToast({ body: { message: `📜 中书省规划中...（第 ${attempt} 次）`, variant: "info" } })
 
     try {
-      plan = await planWithZhongshu(client, edict, attempt, rejectionReasons)
+      plan = await planWithZhongshu(client, edict, attempt, rejectionReasons, recon.fullContext || undefined)
     } catch (err) {
       if (attempt === maxAttempts) {
         store.update(edict.id, { status: "failed" })
@@ -325,6 +343,7 @@ export async function runPipeline(
       plan,
       config.pipeline.sensitivePatterns,
       config.pipeline.mandatoryDepartments,
+      recon.summary || undefined,
     )
     store.update(edict.id, { review })
 

@@ -3,7 +3,7 @@ import type { OpencodeClient } from "@opencode-ai/sdk"
 import type { EdictStore, EmperorConfig } from "../types"
 import { runPipeline } from "../engine/pipeline"
 
-export function createEdictTool(client: OpencodeClient, store: EdictStore, config: EmperorConfig) {
+export function createEdictTool(client: OpencodeClient, store: EdictStore, config: EmperorConfig, directory: string) {
   return tool({
     description: `下旨：将复杂任务交由三省六部协作完成。当用户需求涉及多个方面（如代码实现+文档+安全审查+基建）时使用。单一简单任务请直接处理，不要下旨。`,
     args: {
@@ -22,7 +22,7 @@ export function createEdictTool(client: OpencodeClient, store: EdictStore, confi
       context.metadata({ title: `下旨：${args.title}` })
 
       try {
-        const memorial = await runPipeline(edict, context, client, store, config)
+        const memorial = await runPipeline(edict, context, client, store, config, directory)
         return memorial
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)

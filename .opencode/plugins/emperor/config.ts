@@ -59,6 +59,12 @@ const DEFAULT_AGENTS: Record<string, AgentConfig> = {
     description: "Libu - Architecture and refactoring",
     tools: { read: true, grep: true, glob: true },
   },
+  jinyiwei: {
+    mode: "subagent",
+    prompt: "TODO: Add system prompt in Task 3",
+    description: "Jinyiwei - Project reconnaissance and codebase analysis",
+    tools: { read: true, grep: true, glob: true },
+  },
 }
 
 const DEFAULT_CONFIG: EmperorConfig = {
@@ -74,6 +80,10 @@ const DEFAULT_CONFIG: EmperorConfig = {
     ],
     mandatoryDepartments: ["hubu"],
     requirePostVerification: true,
+  },
+  recon: {
+    enabled: true,
+    cacheDir: "recon",
   },
   store: {
     dataDir: ".opencode/plugins/emperor/data",
@@ -121,6 +131,9 @@ export function loadConfig(directory: string): EmperorConfig {
     pipeline: userConfig.pipeline
       ? { ...DEFAULT_CONFIG.pipeline, ...userConfig.pipeline }
       : DEFAULT_CONFIG.pipeline,
+    recon: userConfig.recon
+      ? { ...DEFAULT_CONFIG.recon, ...userConfig.recon }
+      : DEFAULT_CONFIG.recon,
     store: userConfig.store
       ? { ...DEFAULT_CONFIG.store, ...userConfig.store }
       : DEFAULT_CONFIG.store,
