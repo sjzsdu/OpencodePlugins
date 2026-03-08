@@ -179,7 +179,7 @@ ${JSON.stringify(plan, null, 2)}
   // --- Code-based dispatch: topological sort + parallel execution ---
   // This is shangshu's "下达" to the six departments, implemented efficiently via code
   client.tui.showToast({ body: { message: "⚔️ 尚书省调度六部执行中...", variant: "info" } })
-  const executions = await dispatchAndExecute(client, edict, plan)
+  const executions = await dispatchAndExecute(client, edict, plan, config.pipeline.maxSubtaskRetries)
 
   // --- Post-execution verification (if enabled) ---
   if (config.pipeline.requirePostVerification) {
@@ -193,27 +193,56 @@ ${JSON.stringify(plan, null, 2)}
       dependencies: [],
       effort: "medium" as const,
     }
-    const verification = await executeSubtask(client, edict, verificationSubtask)
+    const verification = await executeSubtask(client, edict, verificationSubtask, 0)
     executions.push(verification)
   }
 
   // --- Turn 2: Post-dispatch — shangshu generates memorial (奏折) ---
   client.tui.showToast({ body: { message: "📋 尚书省汇总奏折中...", variant: "info" } })
 
+  const failedExecs = executions.filter((e) => e.status === "failed")
+  const retriedExecs = executions.filter((e) => e.retryCount > 0)
+
   const executionSummary = executions.map((exec) => {
     const subtask = plan.subtasks.find((s) => s.index === exec.subtaskIndex)
     const dept = DEPT_DISPLAY[exec.department] ?? exec.department
     const title = subtask?.title ?? (exec.subtaskIndex >= plan.subtasks.length ? "执行后综合验证" : `子任务 ${exec.subtaskIndex}`)
     const status = exec.status === "completed" ? "✅ 完成" : "❌ 失败"
+    const retryNote = exec.retryCount > 0 ? ` (经 ${exec.retryCount} 次重试)` : ""
     const detail = exec.status === "completed" ? (exec.result ?? "（无详细输出）") : (exec.error ?? "未知错误")
-    return `### ${dept}: ${title}\n状态: ${status}\n${detail}`
+    return `### ${dept}: ${title}${retryNote}\n状态: ${status}\n${detail}`
   }).join("\n\n")
+
+  // Build failure analysis section for shangshu
+  let failureAnalysisBlock = ""
+  if (failedExecs.length > 0) {
+    const failDetails = failedExecs.map((e) => {
+      const subtask = plan.subtasks.find((s) => s.index === e.subtaskIndex)
+      const dept = DEPT_DISPLAY[e.department] ?? e.department
+      return `- ${dept}「${subtask?.title ?? `子任务 ${e.subtaskIndex}`}」: ${e.error ?? "未知错误"} (已重试 ${e.retryCount} 次)`
+    }).join("\n")
+    failureAnalysisBlock = `
+
+## 失败分析请求
+以下子任务在重试后仍然失败，请分析可能的原因并给出建议：
+${failDetails}
+
+请在奏折中增加一个「失败分析与建议」章节，包含：
+1. 每个失败任务的可能原因（代码问题 vs 测试问题 vs 环境问题）
+2. 建议的修复方案
+3. 是否需要用户重新下旨`
+  }
+
+  let retryStatsBlock = ""
+  if (retriedExecs.length > 0) {
+    retryStatsBlock = `\n\n## 重试统计\n共有 ${retriedExecs.length} 个子任务经过重试，其中 ${retriedExecs.filter((e) => e.status === "completed").length} 个重试后成功，${failedExecs.length} 个仍然失败。`
+  }
 
   const postDispatchPrompt = `六部执行已完成，请汇总以下结果，生成奏折呈报太子。
 
 ## 各部执行结果
 
-${executionSummary}
+${executionSummary}${retryStatsBlock}${failureAnalysisBlock}
 
 ## 奏折要求
 
@@ -221,8 +250,7 @@ ${executionSummary}
 1. **旨意回顾** — 原始需求概述
 2. **规划方案概述** — 中书省方案的核心思路
 3. **执行结果** — 各部门的执行详情和状态
-4. **风险与遗留** — 未解决的问题、潜在风险
-5. **总结** — 整体评估：成功率、质量判断、后续建议
+${failedExecs.length > 0 ? "4. **失败分析与建议** — 失败原因分析、归因判断、修复建议\n5. **风险与遗留** — 未解决的问题、潜在风险\n6. **总结** — 整体评估：成功率、质量判断、后续建议" : "4. **风险与遗留** — 未解决的问题、潜在风险\n5. **总结** — 整体评估：成功率、质量判断、后续建议"}
 
 请直接输出奏折内容（Markdown格式），不需要JSON。`
 

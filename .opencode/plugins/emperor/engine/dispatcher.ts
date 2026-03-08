@@ -51,11 +51,12 @@ export function topologicalSort(subtasks: Subtask[]): Subtask[][] {
   return waves
 }
 
-/** Execute a single subtask by creating a session for the assigned department */
+/** Execute a single subtask, with optional retry using the same session */
 export async function executeSubtask(
   client: OpencodeClient,
   edict: Edict,
   subtask: Subtask,
+  maxRetries: number = 0,
 ): Promise<Execution> {
   const deptName = DEPT_NAMES[subtask.department] ?? subtask.department
   const execution: Execution = {
@@ -63,16 +64,21 @@ export async function executeSubtask(
     subtaskIndex: subtask.index,
     sessionId: "",
     status: "running",
+    retryCount: 0,
     startedAt: Date.now(),
   }
 
-  try {
-    const session = await client.session.create({
-      body: { title: `${deptName}·${subtask.title}` },
-    })
-    execution.sessionId = session.data!.id
+  // Create session once — reused across retries
+  const session = await client.session.create({
+    body: { title: `${deptName}·${subtask.title}` },
+  })
+  execution.sessionId = session.data!.id
 
-    const prompt = `你正在执行一个旨意的子任务。
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      let prompt: string
+      if (attempt === 0) {
+        prompt = `你正在执行一个旨意的子任务。
 
 ## 旨意背景
 标题: ${edict.title}
@@ -86,43 +92,110 @@ ${subtask.description}
 工作量评估: ${subtask.effort}
 
 请执行以上任务并详细报告执行结果。`
+      } else {
+        // Retry prompt — includes previous failure context
+        prompt = `上次执行失败，请重新尝试（第 ${attempt + 1} 次）。
 
-    const response = await client.session.prompt({
-      path: { id: execution.sessionId },
-      body: {
-        agent: subtask.department,
-        parts: [{ type: "text" as const, text: prompt }],
-      },
-    })
+## 上次失败原因
+${execution.error ?? "未知错误"}
 
-    execution.result = extractText(response.data?.parts ?? [])
-    execution.status = "completed"
-    execution.completedAt = Date.now()
-  } catch (err) {
-    execution.status = "failed"
-    execution.error = err instanceof Error ? err.message : String(err)
-    execution.completedAt = Date.now()
+## 原始任务
+**${subtask.title}**
+
+${subtask.description}
+
+请分析失败原因，调整方案后重新执行。`
+      }
+
+      const response = await client.session.prompt({
+        path: { id: execution.sessionId },
+        body: {
+          agent: subtask.department,
+          parts: [{ type: "text" as const, text: prompt }],
+        },
+      })
+
+      execution.result = extractText(response.data?.parts ?? [])
+      execution.status = "completed"
+      execution.completedAt = Date.now()
+      execution.retryCount = attempt
+      return execution
+    } catch (err) {
+      execution.error = err instanceof Error ? err.message : String(err)
+      execution.retryCount = attempt
+
+      if (attempt < maxRetries) {
+        client.tui.showToast({
+          body: {
+            message: `⚠️ ${deptName}「${subtask.title}」执行失败，重试中 (${attempt + 1}/${maxRetries})`,
+            variant: "warning",
+          },
+        })
+      }
+    }
   }
 
+  // All retries exhausted
+  execution.status = "failed"
+  execution.completedAt = Date.now()
   return execution
 }
 
 /**
  * Sort subtasks into waves and execute each wave in parallel.
- * Failed subtasks are marked but don't block other subtasks.
+ * Shows toast progress per wave and per department.
+ * Failed subtasks are retried up to maxRetries times before being marked failed.
  */
 export async function dispatchAndExecute(
   client: OpencodeClient,
   edict: Edict,
   plan: Plan,
+  maxRetries: number = 0,
 ): Promise<Execution[]> {
   const waves = topologicalSort(plan.subtasks)
   const allExecutions: Execution[] = []
+  const totalSubtasks = plan.subtasks.length
+  let completedCount = 0
 
-  for (const wave of waves) {
+  for (let waveIdx = 0; waveIdx < waves.length; waveIdx++) {
+    const wave = waves[waveIdx]
+    const waveLabel = `Wave ${waveIdx + 1}/${waves.length}`
+
+    // Toast: wave start
+    const waveDepts = wave.map((st) => DEPT_NAMES[st.department] ?? st.department).join("、")
+    client.tui.showToast({
+      body: {
+        message: `📡 ${waveLabel} 开始执行: ${waveDepts} (${completedCount}/${totalSubtasks} 已完成)`,
+        variant: "info",
+      },
+    })
+
     const waveResults = await Promise.all(
-      wave.map((subtask) => executeSubtask(client, edict, subtask)),
+      wave.map((subtask) => executeSubtask(client, edict, subtask, maxRetries)),
     )
+
+    // Count results for this wave
+    const waveCompleted = waveResults.filter((e) => e.status === "completed").length
+    const waveFailed = waveResults.filter((e) => e.status === "failed").length
+    completedCount += waveResults.length
+
+    // Toast: wave complete
+    if (waveFailed > 0) {
+      client.tui.showToast({
+        body: {
+          message: `⚠️ ${waveLabel} 完成: ${waveCompleted} 成功, ${waveFailed} 失败 (${completedCount}/${totalSubtasks})`,
+          variant: "warning",
+        },
+      })
+    } else {
+      client.tui.showToast({
+        body: {
+          message: `✅ ${waveLabel} 完成: ${waveCompleted}/${wave.length} 成功 (${completedCount}/${totalSubtasks})`,
+          variant: "success",
+        },
+      })
+    }
+
     allExecutions.push(...waveResults)
   }
 

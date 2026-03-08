@@ -121,8 +121,8 @@ graph TD
     "reviewMode": "mixed",
     "sensitivePatterns": ["删除", "drop", "rm -rf", "production", "密钥", "credentials"],
     "mandatoryDepartments": ["hubu"],
-    "requirePostVerification": true
-  },
+    "requirePostVerification": true,
+    "maxSubtaskRetries": 1
   "recon": {
     "enabled": true,
     "cacheDir": "recon"
@@ -147,6 +147,7 @@ graph TD
 - **store.dataDir**: 圣旨数据持久化目录
 - **recon.enabled**: 是否启用锦衣卫侦察（默认 `true`）。禁用后跳过 Phase 0，不注入项目上下文
 - **recon.cacheDir**: 侦察报告缓存目录（相对于 store.dataDir），按 git hash 缓存，同一提交不重复扫描
+- **pipeline.maxSubtaskRetries**: 子任务执行失败后的自动重试次数（默认 `1`）。重试时复用同一 session，并告知 agent 上次失败原因
 
 ## 使用方式
 
@@ -222,15 +223,17 @@ graph TD
 尚书省作为执行总调度，在门下省审核通过后接管流程：
 
 1. **预调度**：审查执行策略，确认资源分配
-2. **代码调度**：基于拓扑排序并行调度六部执行
-3. **后置验证**：可选的户部后置验证环节
-4. **汇总奏折**：AI 生成结构化奏折，汇报各部执行结果
+2. **代码调度**：基于拓扑排序并行调度六部执行，每个 Wave 实时 Toast 进度通知
+3. **失败自动重试**：子任务失败后自动重试（复用同一 session，告知失败原因）
+4. **失败分析**：重试仍失败时，尚书省分析失败原因（代码问题/测试问题/环境问题）并给出修复建议
+5. **后置验证**：可选的户部后置验证环节
+6. **汇总奏折**：AI 生成结构化奏折，包含重试统计和失败分析
 
 ### 奏折格式
 
 执行完成后，尚书省生成结构化奏折（Memorial），包含：
 
-- 各部执行结果和状态
+- 各部执行结果和状态（含重试次数）
 - 成功/失败统计
 - 风险提示和门下省审核意见
 

@@ -71,6 +71,7 @@ const DEFAULT_CONFIG: EmperorConfig = {
   agents: DEFAULT_AGENTS,
   pipeline: {
     maxReviewAttempts: 3,
+    maxSubtaskRetries: 1,
     sensitivePatterns: [
       "删除|remove|delete|drop",
       "数据库.*迁移|migration",

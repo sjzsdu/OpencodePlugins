@@ -62,6 +62,7 @@ export interface Execution {
   status: "pending" | "running" | "completed" | "failed"
   result?: string
   error?: string
+  retryCount: number
   startedAt?: number
   completedAt?: number
 }
@@ -79,6 +80,7 @@ export interface EmperorConfig {
   agents: Record<string, AgentConfig>
   pipeline: {
     maxReviewAttempts: number
+    maxSubtaskRetries: number
     sensitivePatterns: string[]
     mandatoryDepartments: DepartmentId[]
     requirePostVerification: boolean
