@@ -21,6 +21,21 @@ const DEFAULT_PIPELINE: EmperorConfig["pipeline"] = {
 const DEFAULT_RECON: EmperorConfig["recon"] = {
   enabled: true,
   cacheDir: "recon",
+  maxIncrementalUpdates: 10,
+  forceRebuildPatterns: [
+    "package.json",
+    "tsconfig.json",
+    "tsconfig.*.json",
+    ".eslintrc*",
+    ".prettierrc*",
+    "Cargo.toml",
+    "go.mod",
+    "pyproject.toml",
+    "Dockerfile",
+    "docker-compose*",
+    ".github/workflows/*",
+    ".gitlab-ci.yml",
+  ],
 }
 
 const DEFAULT_STORE: EmperorConfig["store"] = {

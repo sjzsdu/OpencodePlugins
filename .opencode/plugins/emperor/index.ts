@@ -30,19 +30,19 @@ export const EmperorPlugin: Plugin = async ({ client, directory }) => {
       "memorial": createMemorialTool(store),
       "halt": createHaltTool(client, store),
       // === 锦衣卫侦察工具（各省视角） ===
-      "taizi_recon": createTaiziReconTool(client, store),
-      "zhongshu_recon": createZhongshuReconTool(client, store),
-      "menxia_recon": createMenxiaReconTool(client, store),
+      "taizi_recon": createTaiziReconTool(client, store, config, directory),
+      "zhongshu_recon": createZhongshuReconTool(client, store, config, directory),
+      "menxia_recon": createMenxiaReconTool(client, store, config, directory),
       // === 三省流转工具 ===
       "submit_plan": createSubmitPlanTool(client, store),
       "reject_plan": createRejectPlanTool(client, store),
       "approve_plan": createApprovePlanTool(client, store, config),
       // === 锦衣卫侦察工具（六部视角） ===
-      "libu_recon": createLibuReconTool(client, store),
-      "bingbu_recon": createBingbuReconTool(client, store),
-      "hubu_recon": createHubuReconTool(client, store),
-      "xingbu_recon": createXingbuReconTool(client, store),
-      "gongbu_recon": createGongbuReconTool(client, store),
+      "libu_recon": createLibuReconTool(client, store, config, directory),
+      "bingbu_recon": createBingbuReconTool(client, store, config, directory),
+      "hubu_recon": createHubuReconTool(client, store, config, directory),
+      "xingbu_recon": createXingbuReconTool(client, store, config, directory),
+      "gongbu_recon": createGongbuReconTool(client, store, config, directory),
       // === 尚书省派发工具 ===
       "assign_architecture": createAssignArchitectureTool(client, store),
       "assign_implementation": createAssignImplementationTool(client, store),

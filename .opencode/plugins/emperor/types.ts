@@ -15,6 +15,21 @@ export type EdictStatus =
   | "failed"         // 执行失败
   | "halted"         // 用户叫停
 
+/** The 7 concern-area facets that 锦衣卫 produces */
+export type ReconFacetId = "architecture" | "techstack" | "api-surface" | "testing" | "security" | "cicd" | "conventions"
+
+/** Manifest stored alongside facet files — tracks cache freshness */
+export interface ReconManifest {
+  /** Git commit hash of the last scan */
+  gitHash: string
+  /** Timestamp of the last full scan */
+  lastFullScanAt: number
+  /** Number of incremental updates since last full scan (resets to 0 on full scan) */
+  incrementalCount: number
+  /** Per-facet metadata */
+  facets: Partial<Record<ReconFacetId, { updatedAt: number; size: number }>>
+}
+
 export type DepartmentId = "bingbu" | "gongbu" | "lifebu" | "xingbu" | "hubu" | "libu"
 
 export interface Edict {
@@ -115,6 +130,10 @@ export interface EmperorConfig {
   recon: {
     enabled: boolean
     cacheDir: string
+    /** Full rebuild after N incremental updates (default: 10) */
+    maxIncrementalUpdates: number
+    /** File patterns that trigger full facet rebuild when changed (not incremental patch) */
+    forceRebuildPatterns: string[]
   }
   store: {
     dataDir: string
