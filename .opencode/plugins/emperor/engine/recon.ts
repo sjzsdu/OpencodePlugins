@@ -19,37 +19,56 @@ const FACET_META: Record<ReconFacetId, { title: string; description: string; tri
   architecture: {
     title: "架构总览",
     description: "目录结构、模块依赖、分层架构、核心组件关系",
-    triggerPatterns: ["src/", "lib/", "app/", "packages/", "index."],
+    triggerPatterns: ["src/", "lib/", "app/", "packages/", "internal/", "domain/", "core/", "modules/", "index.", "main.", "app."],
   },
   techstack: {
     title: "技术栈",
     description: "语言、框架、构建工具、依赖版本、运行时配置",
-    triggerPatterns: ["package.json", "tsconfig", "Cargo.toml", "go.mod", "pyproject.toml", "pom.xml"],
+    triggerPatterns: [
+      // Node.js
+      "package.json", "tsconfig", "yarn.lock", "pnpm-lock.yaml", "bun.lockb",
+      // Python
+      "pyproject.toml", "setup.py", "setup.cfg", "requirements.txt", "Pipfile", "poetry.lock",
+      // Go
+      "go.mod", "go.sum",
+      // Rust
+      "Cargo.toml", "Cargo.lock",
+      // Java
+      "pom.xml", "build.gradle", "build.gradle.kts",
+      // C#/.NET
+      "*.csproj", "*.sln", "*.props",
+      // Ruby
+      "Gemfile", "Gemfile.lock", "*.gemspec",
+      // PHP
+      "composer.json", "composer.lock", "phpunit.xml",
+      // Dart/Flutter
+      "pubspec.yaml", "pubspec.lock",
+    ],
   },
   "api-surface": {
     title: "接口定义",
     description: "暴露的API接口、路由定义、类型导出、数据结构",
-    triggerPatterns: ["routes/", "api/", "types/", "schema/", "graphql/", "proto/"],
+    triggerPatterns: ["routes/", "api/", "controllers/", "handlers/", "endpoints/", "types/", "schemas/", "graphql/", "proto/", "contracts/", "interfaces/"],
   },
   testing: {
     title: "测试体系",
     description: "测试框架、测试命令、测试目录结构、覆盖率配置",
-    triggerPatterns: ["test/", "tests/", "__tests__/", "spec/", "jest.config", "vitest.config", "*.test.", "*.spec."],
+    triggerPatterns: ["test/", "tests/", "__tests__/", "spec/", "e2e/", "jest.config", "vitest.config", "pytest.ini", "conftest.py", "*.test.*", "*.spec.*", "*_test.go", "*_test.rs"],
   },
   security: {
     title: "安全配置",
     description: "认证鉴权模式、敏感数据处理、依赖安全、权限控制",
-    triggerPatterns: ["auth/", "security/", ".env", "credentials", "permission/", "middleware/"],
+    triggerPatterns: ["auth/", "security/", ".env", ".env.example", ".env.template", "credentials", "permission/", "middleware/", "jwt/", "oauth/", "passport/"],
   },
   cicd: {
     title: "CI/CD与基建",
     description: "构建脚本、CI流水线、部署配置、Docker、环境变量",
-    triggerPatterns: [".github/", ".gitlab-ci", "Dockerfile", "docker-compose", "Makefile", ".circleci/", "scripts/"],
+    triggerPatterns: [".github/", ".gitlab-ci", "Jenkinsfile", "Dockerfile", "docker-compose", "Makefile", ".circleci/", "azure-pipelines/", "bitbucket-pipelines/", "scripts/", ".dockerignore"],
   },
   conventions: {
     title: "代码规范",
     description: "命名习惯、文件组织约定、错误处理模式、日志方式",
-    triggerPatterns: [".eslintrc", ".prettierrc", "src/", "lib/", ".editorconfig"],
+    triggerPatterns: [".eslintrc", ".prettierrc", ".editorconfig", ".golangci.yml", "rustfmt.toml", "flake8", "pylintrc", "sonarlint/"],
   },
 }
 
@@ -292,8 +311,15 @@ ${facetInstructions}
 
 ## 侦察流程
 
-1. 先扫描项目根目录（package.json、tsconfig.json 等配置文件）
-2. 扫描目录结构（glob 主要目录）
+1. 先扫描项目根目录，识别项目类型和配置文件
+   - Python: pyproject.toml, setup.py, requirements.txt, Pipfile
+   - Node.js: package.json, yarn.lock, pnpm-lock.yaml
+   - Go: go.mod, go.sum
+   - Rust: Cargo.toml, Cargo.lock
+   - Java: pom.xml, build.gradle
+   - C#: .csproj, .sln
+   - 其他项目根据实际情况扫描
+2. 扫描目录结构（使用 glob 扫描主要目录）
 3. 深入阅读核心代码文件
 4. 按 7 个关注面分别整理输出
 
@@ -313,8 +339,9 @@ ${FACET_DELIMITER_PREFIX}architecture${FACET_DELIMITER_SUFFIX}
 ## 目录结构
 \`\`\`
 项目根/
-  src/
-  tests/
+  [源代码目录，如 src/, lib/, app/]
+  [测试目录，如 tests/, test/, spec/]
+  [配置目录]
 \`\`\`
 
 ## 核心模块
@@ -323,8 +350,12 @@ ${FACET_DELIMITER_PREFIX}architecture${FACET_DELIMITER_SUFFIX}
 ${FACET_DELIMITER_PREFIX}techstack${FACET_DELIMITER_SUFFIX}
 # 技术栈
 
-- 语言: TypeScript
-- 框架: ...
+- 语言: [根据项目识别，如 Python, JavaScript, Go, Rust 等]
+- 框架: [如有]
+- 构建工具: [如有]
+- 包管理: [如有]
+- 关键依赖: ...
+
 ...（你的分析内容）...
 
 （以此类推，必须包含全部 7 个关注面）`
