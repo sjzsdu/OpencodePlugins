@@ -1,7 +1,6 @@
 import type { Plugin } from "@opencode-ai/plugin"
 import { loadConfig } from "./config"
 import { JsonEdictStore } from "./store"
-import { PROMPTS } from "./agents/prompts"
 import { createEdictTool } from "./tools/edict"
 import { createMemorialTool } from "./tools/memorial"
 import { createHaltTool } from "./tools/halt"
@@ -15,16 +14,10 @@ export const EmperorPlugin: Plugin = async ({ client, directory }) => {
   return {
     config: async (openCodeConfig) => {
       const configAny = openCodeConfig as any
-
-      // Configure agents with Emperor prompts
       if (!configAny.agent) {
         configAny.agent = {}
       }
       for (const [id, agentConfig] of Object.entries(config.agents)) {
-        const prompt = PROMPTS[id]
-        if (prompt && (!agentConfig.prompt || agentConfig.prompt.startsWith("TODO"))) {
-          agentConfig.prompt = prompt
-        }
         configAny.agent[id] = agentConfig
       }
     },

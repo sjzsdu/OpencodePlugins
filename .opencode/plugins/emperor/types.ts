@@ -75,7 +75,15 @@ export interface EdictStore {
   save(): void
 }
 
-/** Emperor plugin configuration shape (stored in .opencode/emperor.json) */
+/** User-facing configuration (what goes in emperor.json) */
+export interface EmperorUserConfig {
+  agents?: Record<string, { model?: string }>
+  pipeline?: Partial<EmperorConfig['pipeline']>
+  recon?: Partial<EmperorConfig['recon']>
+  store?: Partial<EmperorConfig['store']>
+}
+
+/** Internal full configuration (code defaults + user overrides) */
 export interface EmperorConfig {
   agents: Record<string, AgentConfig>
   pipeline: {
