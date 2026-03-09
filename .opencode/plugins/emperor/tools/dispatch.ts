@@ -462,3 +462,45 @@ ${cicdBlock}
     },
   })
 }
+
+// ============================================================
+// Tool 11: 尚书汇总呈奏太子 — submit_memorial
+// ============================================================
+
+export function createSubmitMemorialTool(client: OpencodeClient, store: EdictStore) {
+  return tool({
+    description: "汇总呈奏太子：尚书省完成六部执行流水线后，将所有执行结果汇总为奏折，正式呈报太子。这是执行流程的最后一步，标志着旨意执行完毕。",
+    args: {
+      edict_id: tool.schema.string().describe("旨意 ID"),
+      memorial: tool.schema.string().describe("奏折内容（Markdown 格式），需包含：旨意回顾、规划方案概述、架构设计要点、编码实现要点、测试结果、后置任务结果、风险与遗留、总结"),
+    },
+    async execute(args) {
+      const edict = store.get(args.edict_id)
+      if (!edict) {
+        return `未找到旨意: ${args.edict_id}`
+      }
+
+      const validStatuses = ["executing", "dispatched"]
+      if (!validStatuses.includes(edict.status)) {
+        return `旨意当前状态为「${edict.status}」，不处于执行中（executing/dispatched），无法提交奏折。`
+      }
+
+      if (!args.memorial.trim()) {
+        return "奏折内容不能为空。请汇总各部执行结果后再提交。"
+      }
+
+      store.update(args.edict_id, { memorial: args.memorial, status: "completed" })
+
+      client.tui.showToast({ body: { message: `📋 尚书省奏折已呈报太子：${edict.title}`, variant: "success" } })
+
+      return `奏折已呈报太子，旨意执行完毕。
+
+旨意: ${edict.title} (${args.edict_id})
+状态: completed
+
+---
+
+${args.memorial}`
+    },
+  })
+}

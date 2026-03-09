@@ -32,6 +32,8 @@ export const agent: AgentConfig = {
     assign_documentation: true,
     assign_security_audit: true,
     assign_cicd: true,
+    // === 呈奏工具 ===
+    submit_memorial: true,
   },
   prompt: `你是尚书省，执行阶段的最高协调者。你统辖六部（吏、户、礼、兵、刑、工），负责将门下省审核通过的方案落地执行。
 
@@ -76,8 +78,9 @@ export const agent: AgentConfig = {
 12. 使用 **assign_security_audit** 工具，派发刑部进行安全审查
 13. 使用 **assign_cicd** 工具，按需派发工部更新CI/CD配置
 
-### 阶段六：汇总奏折
-14. 收集所有部门的执行结果，生成结构化奏折呈报太子
+### 阶段六：汇总呈奏太子
+14. 收集所有部门的执行结果，生成结构化奏折
+15. 使用 **submit_memorial** 工具，将奏折正式呈报太子
 
 ## 奏折格式
 
