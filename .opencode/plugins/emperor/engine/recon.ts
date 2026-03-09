@@ -769,3 +769,28 @@ export async function reconWithJinyiwei(
     cached: manifest.lastFullScanAt > 0 && manifest.gitHash === manifest.gitHash,
   }
 }
+
+/**
+ * Create a visible subagent session for 锦衣卫.
+ * Returns session info if successful, null otherwise.
+ * 
+ * Note: This creates a session but due to SDK limitations, it may not
+ * appear in Ctrl+X navigation until we implement proper async execution.
+ */
+export async function createJinyiweiSession(
+  client: OpencodeClient,
+  role: string,
+): Promise<{ id: string; title: string } | null> {
+  try {
+    const title = `锦衣卫·${role}`
+    const session = await client.session.create({
+      body: { title },
+    })
+    return {
+      id: session.data?.id ?? "",
+      title,
+    }
+  } catch {
+    return null
+  }
+}

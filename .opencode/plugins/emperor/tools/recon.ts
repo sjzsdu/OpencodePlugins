@@ -1,7 +1,7 @@
 import { tool } from "@opencode-ai/plugin"
 import type { OpencodeClient } from "@opencode-ai/sdk"
 import type { EdictStore, EmperorConfig } from "../types"
-import { getReconForRole, forceFullScan } from "../engine/recon"
+import { getReconForRole, forceFullScan, createJinyiweiSession } from "../engine/recon"
 
 // ============================================================
 // Tool 1: 太子侦察 — taizi_recon
@@ -15,6 +15,23 @@ export function createTaiziReconTool(client: OpencodeClient, store: EdictStore, 
       force_rebuild: tool.schema.boolean().optional().describe("是否强制全量重建侦察报告（默认 false）"),
     },
     async execute(args) {
+      // 创建可见的子会话（实验性）
+      let sessionInfo = ""
+      try {
+        const session = await createJinyiweiSession(client, "太子侦察")
+        if (session?.id) {
+          sessionInfo = `\n\n> 📍 会话 ID: ${session.id}\n> 💡 提示: 按 Ctrl+X ↓ 可切换到此子会话查看进度`
+          client.tui.showToast({ 
+            body: { 
+              message: `🕵️ 太子侦察会话已创建: ${session.id}`, 
+              variant: "info" 
+            } 
+          })
+        }
+      } catch {
+        // 继续执行，不阻塞
+      }
+
       try {
         if (args.force_rebuild) {
           await forceFullScan(client, config, directory)
@@ -23,7 +40,7 @@ export function createTaiziReconTool(client: OpencodeClient, store: EdictStore, 
         const { context, gitHash, cached } = await getReconForRole(client, config, directory, "taizi")
 
         if (!context) {
-          return "锦衣卫侦察报告为空。\n\n可能原因：\n1. 项目目录不正确\n2. recon 功能未启用（检查 emperor.json 中 recon.enabled）\n3. jinyiwei agent 未正确配置\n\n可尝试：使用 force_rebuild: true 参数强制重建"
+          return "锦衣卫侦察报告为空。\n\n可能原因：\n1. 项目目录不正确\n2. recon 功能未启用（检查 emperor.json 中 recon.enabled）\n3. jinyiwei agent 未正确配置\n\n可尝试：使用 force_rebuild: true 参数强制重建" + sessionInfo
         }
 
         let edictBlock = ""
@@ -34,7 +51,7 @@ export function createTaiziReconTool(client: OpencodeClient, store: EdictStore, 
           }
         }
 
-        return `${context}${edictBlock}\n\n---\nGit: ${gitHash} | Cached: ${cached}`
+        return `${context}${edictBlock}\n\n---\nGit: ${gitHash} | Cached: ${cached}${sessionInfo}`
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         return `执行出错: ${msg}\n\n请检查：\n1. jinyiwei agent 是否已注册\n2. 项目是否是有效的 git 仓库`
@@ -60,6 +77,21 @@ export function createZhongshuReconTool(client: OpencodeClient, store: EdictStor
         return `未找到旨意: ${args.edict_id}`
       }
 
+      // 创建可见的子会话
+      let sessionInfo = ""
+      try {
+        const session = await createJinyiweiSession(client, "中书省侦察")
+        if (session?.id) {
+          sessionInfo = `\n\n> 📍 会话 ID: ${session.id}`
+          client.tui.showToast({ 
+            body: { 
+              message: `🕵️ 中书省侦察会话已创建: ${session.id}`, 
+              variant: "info" 
+            } 
+          })
+        }
+      } catch {}
+
       if (args.force_rebuild) {
         await forceFullScan(client, config, directory)
       }
@@ -67,10 +99,10 @@ export function createZhongshuReconTool(client: OpencodeClient, store: EdictStor
       const { context, gitHash } = await getReconForRole(client, config, directory, "zhongshu")
 
       if (!context) {
-        return "锦衣卫侦察报告为空。请确认项目目录正确且 recon 已启用。"
+        return "锦衣卫侦察报告为空。请确认项目目录正确且 recon 已启用。" + sessionInfo
       }
 
-      return `${context}\n\n---\n\n## 当前旨意\n标题: ${edict.title}\n内容: ${edict.content}\n优先级: ${edict.priority}\n\n---\nGit: ${gitHash}`
+      return `${context}\n\n---\n\n## 当前旨意\n标题: ${edict.title}\n内容: ${edict.content}\n优先级: ${edict.priority}\n\n---\nGit: ${gitHash}${sessionInfo}`
     },
   })
 }
@@ -81,7 +113,7 @@ export function createZhongshuReconTool(client: OpencodeClient, store: EdictStor
 
 export function createMenxiaReconTool(client: OpencodeClient, store: EdictStore, config: EmperorConfig, directory: string) {
   return tool({
-    description: "门下省侦察：获取审核所需的关键信息。从锦衣卫缓存中读取架构总览、安全配置、接口定义三个关注面。",
+    description: "门下省侦察：获取审核所需的关键信息。从锦衣卫缓存中读取架构总览，安全配置、接口定义三个关注面。",
     args: {
       edict_id: tool.schema.string().describe("旨意 ID"),
       force_rebuild: tool.schema.boolean().optional().describe("是否强制全量重建侦察报告（默认 false）"),
