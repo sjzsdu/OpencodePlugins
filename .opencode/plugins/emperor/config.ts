@@ -39,7 +39,7 @@ const DEFAULT_RECON: EmperorConfig["recon"] = {
 }
 
 const DEFAULT_STORE: EmperorConfig["store"] = {
-  dataDir: ".opencode/plugins/emperor/data",
+  dataDir: ".emperor",
 }
 
 /**
