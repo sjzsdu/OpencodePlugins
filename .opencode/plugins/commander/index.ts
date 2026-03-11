@@ -5,7 +5,7 @@ import { createTaskTool } from "./tools/task"
 import { createStatusTool } from "./tools/status"
 import { createHaltTool } from "./tools/halt"
 
-export const CommanderPlugin: Plugin = async ({ client, directory }) => {
+export const CommanderPlugin: Plugin = async ({ client, project, directory, worktree, serverUrl, $ }) => {
   const config = loadConfig(directory)
   const store = new JsonTaskStore(directory, config.store.dataDir)
 
@@ -19,6 +19,28 @@ export const CommanderPlugin: Plugin = async ({ client, directory }) => {
       }
       for (const [id, agentConfig] of Object.entries(config.agents)) {
         configAny.agent[id] = agentConfig
+      }
+    },
+    "tool.execute.before": async ({ tool: toolID, sessionID, callID }, output) => {
+      if (toolID.startsWith("cmd_")) {
+        client.app.log({ 
+          body: { 
+            service: "commander", 
+            level: "debug", 
+            message: `Tool ${toolID} executing in session ${sessionID}` 
+          } 
+        })
+      }
+    },
+    "tool.execute.after": async ({ tool: toolID, sessionID, callID, args }, output) => {
+      if (toolID === "cmd_task" && output.metadata?.taskId) {
+        client.app.log({ 
+          body: { 
+            service: "commander", 
+            level: "info", 
+            message: `Task ${output.metadata.taskId} ${output.metadata?.status || "created"}` 
+          } 
+        })
       }
     },
     tool: {

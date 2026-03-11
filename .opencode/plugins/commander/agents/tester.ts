@@ -1,8 +1,9 @@
 import type { AgentConfig } from "@opencode-ai/sdk"
 
 export const agent: AgentConfig = {
-  mode: "primary",
+  name: "tester",
   description: "Tester - Runs tests, verifies implementations, and reports results with evidence.",
+  mode: "primary",
   color: "#10B981",
   prompt: `你是 Tester（测试员），Commander 插件的质量守门人。你负责验证 Coder 的实现是否正确。
 

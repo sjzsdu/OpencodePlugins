@@ -1,8 +1,9 @@
 import type { AgentConfig } from "@opencode-ai/sdk"
 
 export const agent: AgentConfig = {
-  mode: "primary",
+  name: "coder",
   description: "Coder - Implements features, fixes bugs, refactors code, and handles all code modifications.",
+  mode: "primary",
   color: "#3B82F6",
   prompt: `你是 Coder（编码员），Commander 插件的实现者。你负责编写代码、修复 Bug、重构和文档等所有代码修改工作。
 

@@ -1,4 +1,5 @@
-import { tool } from "@opencode-ai/plugin"
+import { tool } from "@opencode-ai/plugin/tool"
+import { z } from "zod"
 import type { TaskStore, TaskStatus } from "../types"
 
 const STATUS_DISPLAY: Record<string, string> = {
@@ -18,8 +19,8 @@ export function createStatusTool(store: TaskStore) {
   return tool({
     description: "查看 Commander 任务的状态和历史记录",
     args: {
-      task_id: tool.schema.string().optional().describe("任务 ID，不填则列出全部"),
-      status: tool.schema.string().optional().describe("按状态过滤 (received, analyzing, planning, executing, verifying, fixing, reviewing, completed, failed, halted)"),
+      task_id: z.string().optional().describe("任务 ID，不填则列出全部"),
+      status: z.string().optional().describe("按状态过滤 (received, analyzing, planning, executing, verifying, fixing, reviewing, completed, failed, halted)"),
     },
     async execute(args) {
       if (args.task_id) {
@@ -64,7 +65,6 @@ export function createStatusTool(store: TaskStore) {
         return lines.join("\n")
       }
 
-      // List mode
       const filter = args.status ? { status: args.status as TaskStatus } : undefined
       const tasks = store.list(filter)
       if (tasks.length === 0) {

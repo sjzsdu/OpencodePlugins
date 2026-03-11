@@ -20,11 +20,6 @@ const DEFAULT_STORE: CommanderConfig["store"] = {
   dataDir: ".commander",
 }
 
-/**
- * Load Commander configuration from .opencode/commander.json.
- * Returns defaults if the file doesn't exist or is malformed.
- * Users only need to specify what they want to override — everything has sensible defaults.
- */
 export function loadConfig(directory: string): CommanderConfig {
   const configPath = join(directory, ".opencode", "commander.json")
 
@@ -35,11 +30,14 @@ export function loadConfig(directory: string): CommanderConfig {
       const raw = readFileSync(configPath, "utf-8")
       userConfig = JSON.parse(raw) as CommanderUserConfig
     }
-  } catch {
-    // Ignore parse errors — fall back to defaults
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      console.warn(`[commander] Invalid JSON in ${configPath}, using defaults`)
+    } else {
+      console.warn(`[commander] Failed to load config: ${error instanceof Error ? error.message : String(error)}`)
+    }
   }
 
-  // Merge user model choices into agent definitions from agents/
   const agents: Record<string, AgentConfig> = {}
   for (const [id, agentDef] of Object.entries(AGENTS)) {
     const userModel = userConfig.agents?.[id]?.model

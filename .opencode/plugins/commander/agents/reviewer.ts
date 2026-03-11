@@ -1,8 +1,9 @@
 import type { AgentConfig } from "@opencode-ai/sdk"
 
 export const agent: AgentConfig = {
-  mode: "primary",
+  name: "reviewer",
   description: "Reviewer - Audits code quality and security for complex tasks (read-only).",
+  mode: "primary",
   color: "#8B5CF6",
   prompt: `你是 Reviewer（审查员），Commander 插件的代码审查专家。你只在复杂任务中被调用，负责代码质量和安全审查。
 

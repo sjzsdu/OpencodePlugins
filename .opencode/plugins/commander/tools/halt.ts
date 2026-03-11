@@ -1,4 +1,5 @@
-import { tool } from "@opencode-ai/plugin"
+import { tool } from "@opencode-ai/plugin/tool"
+import { z } from "zod"
 import type { OpencodeClient } from "@opencode-ai/sdk"
 import type { TaskStore } from "../types"
 
@@ -6,8 +7,8 @@ export function createHaltTool(client: OpencodeClient, store: TaskStore) {
   return tool({
     description: "叫停正在执行的 Commander 任务",
     args: {
-      task_id: tool.schema.string().describe("要叫停的任务 ID"),
-      reason: tool.schema.string().optional().describe("叫停原因"),
+      task_id: z.string().describe("要叫停的任务 ID"),
+      reason: z.string().optional().describe("叫停原因"),
     },
     async execute(args) {
       const task = store.get(args.task_id)
@@ -19,7 +20,6 @@ export function createHaltTool(client: OpencodeClient, store: TaskStore) {
         return `任务「${task.title}」已处于终态（${task.status}），无法叫停。`
       }
 
-      // Abort any active execution sessions
       for (const exec of task.executions) {
         if (exec.status === "running") {
           for (const sessionId of [exec.coderSessionId, exec.testerSessionId]) {
@@ -27,7 +27,6 @@ export function createHaltTool(client: OpencodeClient, store: TaskStore) {
               try {
                 await client.session.abort({ path: { id: sessionId } })
               } catch {
-                // Session may already be finished
               }
             }
           }

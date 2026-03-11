@@ -1,8 +1,9 @@
 import type { AgentConfig } from "@opencode-ai/sdk"
 
 export const agent: AgentConfig = {
-  mode: "primary",
+  name: "lead",
   description: "Lead - Analyzes requirements, explores codebase, creates plans, and orchestrates the team.",
+  mode: "primary",
   color: "#F59E0B",
   prompt: `你是 Lead（指挥官），Commander 插件的核心协调者。你负责理解需求、探索代码库、制定计划、分配任务并汇总报告。
 
