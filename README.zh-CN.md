@@ -8,6 +8,7 @@
 |------|---------|------|---------|------|
 | [**Commander**](.opencode/plugins/commander/) | 4 | 单指挥官，快速迭代，Coder↔Tester 修复循环 | 大多数开发任务 | [README](.opencode/plugins/commander/README.md) |
 | [**Emperor**](.opencode/plugins/emperor/) | 11 | 三省六部，制衡审核 | 需要严格多阶段审查的任务 | [README](.opencode/plugins/emperor/README.md) |
+| [**Hive**](.opencode/plugins/hive/) | 动态 | 域自动发现、EventBus 协调、自主执行 | 大型多域项目 | [设计文档](docs/plans/2026-03-11-hive-plugin-design.md) |
 
 ### Commander — 自适应 4 Agent 团队
 
@@ -30,6 +31,17 @@
 - 锦衣卫侦察，git-hash 智能缓存
 - 强制部门参与（户部测试必参与）
 - 敏感操作检测，人工确认
+
+### Hive — 动态域 Agent 协调系统
+
+```
+启动 → 扫描项目 → 发现域 → 创建域 Agent + Queen → EventBus 协调 → 自主执行
+```
+
+- **域发现**: 静态项目扫描 + LLM 分析增强 + 用户配置合并
+- **EventBus**: 发布/订阅事件系统，Agent 间通信
+- **Queen 协调者**: 广播需求、协商接口、并行派发任务
+- **自主执行**: 域 Agent 可自动适配依赖域的破坏性变更
 
 ## 快速开始
 

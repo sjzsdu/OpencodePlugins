@@ -8,6 +8,7 @@ A collection of [OpenCode](https://opencode.ai) plugins that enable multiple AI 
 |--------|--------|----------|----------|------|
 | [**Commander**](.opencode/plugins/commander/) | 4 | Single orchestrator, fast iteration, Coder↔Tester fix loops | Most development tasks | [README](.opencode/plugins/commander/README.md) |
 | [**Emperor**](.opencode/plugins/emperor/) | 11 | Three Departments & Six Ministries (三省六部), governance with checks & balances | Tasks requiring rigorous multi-stage review | [README](.opencode/plugins/emperor/README.md) |
+| [**Hive**](.opencode/plugins/hive/) | Dynamic | Domain auto-discovery, EventBus coordination, autonomous execution | Large multi-domain projects | [Design](docs/plans/2026-03-11-hive-plugin-design.md) |
 
 ### Commander — Adaptive 4-Agent Team
 
@@ -31,6 +32,17 @@ Edict → Crown Prince → Jinyiwei Recon → Zhongshu (plan) → Menxia (review
 - Mandatory department participation (Hubu testing enforced)
 - Sensitive operation detection with manual confirmation
 
+### Hive — Dynamic Domain-Agent Coordination
+
+```
+Startup → Scan project → Discover domains → Create per-domain Agents + Queen → EventBus coordination → Autonomous execution
+```
+
+- **Domain Discovery**: Static project scanning + LLM enrichment + user config merge
+- **EventBus**: Pub/sub event system for agent-to-agent communication
+- **Queen Coordinator**: Broadcasts requirements, negotiates interfaces, dispatches parallel tasks
+- **Autonomous Execution**: Domain agents can self-adapt to breaking changes from dependencies
+
 ## Quick Start
 
 ### 1. Register plugins
@@ -42,12 +54,12 @@ In `.opencode/opencode.json`:
   "$schema": "https://opencode.ai/config.json",
   "plugin": [
     "./plugins/commander/index.ts",
-    "./plugins/emperor/index.ts"
-  ]
+    "./plugins/emperor/index.ts",
+    "./plugins/hive/index.ts"
 }
 ```
 
-Pick one or both.
+Pick one or more.
 
 ### 2. Use
 
@@ -63,10 +75,17 @@ Pick one or both.
 @taizi Implement user authentication with JWT and role-based access control
 ```
 
+**Hive:**
+
+```
+@queen Implement user authentication with JWT and role-based access control
+```
+
 ### 3. Configure (optional)
 
 - Commander: `.opencode/commander.json` — [config docs](.opencode/plugins/commander/README.md#configuration)
 - Emperor: `.opencode/emperor.json` — [config docs](.opencode/plugins/emperor/README.md#configuration)
+- Hive: `.opencode/hive.json` — [design docs](docs/plans/2026-03-11-hive-plugin-design.md)
 
 ## Project Structure
 
@@ -89,6 +108,13 @@ Pick one or both.
 │           ├── engine/                  # Pipeline, recon, reviewer, dispatcher
 │           ├── tools/                   # edict, memorial, halt
 │           └── skills/                  # Built-in skills
+│       └── hive/                       # Hive plugin
+│           ├── index.ts                 # Entry point
+│           ├── discovery/               # Domain auto-discovery
+│           ├── agents/                  # Dynamic agent generator
+│           ├── eventbus/                # Event pub/sub system
+│           ├── tools/                   # hive_emit, hive_status, hive_broadcast, etc.
+│           └── hooks/                   # config, system-transform, file-watcher, autonomy
 ├── package.json                         # Build tooling (private)
 ├── tsconfig.json                        # TypeScript config
 └── .github/workflows/
