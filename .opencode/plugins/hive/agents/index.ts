@@ -1,2 +1,2 @@
-export { generateAgents } from "./generator"
+export { generateAgents, toAgent } from "./generator"
 export { buildDomainPrompt, buildQueenPrompt } from "./prompts"

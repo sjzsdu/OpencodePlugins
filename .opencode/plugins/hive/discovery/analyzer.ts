@@ -1,4 +1,4 @@
-import type { OpencodeClient } from "@opencode-ai/sdk"
+import type { OpencodeClient } from "sjz-opencode-sdk"
 import type { Domain } from "../types"
 import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"

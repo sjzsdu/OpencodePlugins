@@ -1,4 +1,4 @@
-import type { Plugin } from "@opencode-ai/plugin"
+import type { Plugin, Agent } from "sjz-opencode-sdk"
 import { loadConfig } from "./config"
 import { HiveEventBus } from "./eventbus/bus"
 import { discoverDomains } from "./discovery/index"
@@ -14,7 +14,7 @@ import { createFileWatcherHook } from "./hooks/file-watcher"
 import { createAutonomyHandler } from "./hooks/autonomy"
 import { HiveStore } from "./store"
 
-export const HivePlugin: Plugin = async ({ client, directory }) => {
+export const HivePlugin: Plugin = async ({ client, directory, registerAgent }) => {
   const config = loadConfig(directory)
   const store = new HiveStore(directory, config.store.dataDir)
 
@@ -29,7 +29,8 @@ export const HivePlugin: Plugin = async ({ client, directory }) => {
   const sessionToDomain = new Map<string, string>()
 
   // Discover domains (static scan is synchronous, LLM enrichment runs in background)
-  const domains = discoverDomains(directory, config, client)
+  // After LLM enrichment, registerAgent will be called to dynamically add agents
+  const domains = discoverDomains(directory, config, client, registerAgent)
 
   // Subscribe domains to EventBus
   for (const domain of domains) {

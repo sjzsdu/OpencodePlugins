@@ -1,4 +1,4 @@
-import type { AgentConfig } from "@opencode-ai/sdk"
+import type { AgentConfig } from "sjz-opencode-sdk"
 
 export function createConfigHook(agents: Record<string, AgentConfig>) {
   return async (openCodeConfig: Record<string, unknown>) => {

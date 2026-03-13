@@ -520,7 +520,13 @@ OpenCode 插件系统提供以下 17 个 Hook，按功能分类如下：
 |-----------|------|------|------|
 | `command.execute.before` | `command`, `sessionID`, `arguments` | `parts: Part[]` | TUI 命令执行前调用 |
 
-#### 7. 会话相关 Hooks
+#### 7. Agent 相关 Hooks
+
+| Hook 名称 | 输入 | 输出 | 说明 |
+|-----------|------|------|------|
+| `agent.register` | `{ agent: Agent }` | - | Agent 注册时调用 |
+| `agent.unregister` | `{ agent: Agent }` | - | Agent 注销时调用 |
+| `agent.list` | - | `agents: Agent[]` | 获取所有 Agent 列表 |
 
 | Hook 名称 | 输入 | 输出 | 说明 |
 |-----------|------|------|------|
@@ -703,6 +709,113 @@ export default async function myPlugin(input) {
       }
     }
   }
+}
+```
+
+---
+
+## 动态 Agent 注册
+
+OpenCode 支持在运行时动态注册和注销 Agent，无需重启或修改配置文件。
+
+### PluginInput 方法
+
+插件可以通过 `PluginInput` 直接调用方法来动态管理 Agent：
+
+```typescript
+export type PluginInput = {
+  // ... 其他属性
+  registerAgent(agent: Agent): Promise<void>
+  unregisterAgent(name: string): Promise<void>
+  listAgents(): Promise<Agent[]>
+}
+```
+
+### 注册 Agent
+
+```typescript
+export default async function myPlugin(input: PluginInput): Promise<Hooks> {
+  // 直接调用 registerAgent 动态注册
+  await input.registerAgent({
+    name: "my-dynamic-agent",
+    description: "A dynamically registered agent",
+    mode: "subagent",
+    permission: [
+      { permission: "read", pattern: "*", action: "allow" },
+      { permission: "grep", pattern: "*", action: "allow" },
+      { permission: "edit", pattern: "*", action: "deny" },
+    ],
+    options: {}
+  })
+
+  return {}
+}
+```
+
+### 注销 Agent
+
+```typescript
+export default async function myPlugin(input: PluginInput): Promise<Hooks> {
+  // 注销已注册的 Agent
+  await input.unregisterAgent("my-dynamic-agent")
+
+  return {}
+}
+```
+
+### 监听 Agent 注册事件
+
+通过 hooks 监听其他插件注册 Agent：
+
+```typescript
+export default async function myPlugin(input: PluginInput): Promise<Hooks> {
+  return {
+    "agent.register": async ({ agent }) => {
+      console.log("Agent registered:", agent.name)
+    },
+    "agent.unregister": async ({ agent }) => {
+      console.log("Agent unregistered:", agent.name)
+    }
+  }
+}
+```
+
+### 获取 Agent 列表
+
+```typescript
+export default async function myPlugin(input: PluginInput): Promise<Hooks> {
+  // 获取所有已注册的 Agent（包括动态注册的）
+  const agents = await input.listAgents()
+  console.log("Available agents:", agents.map(a => a.name))
+
+  return {}
+}
+```
+
+### Agent 类型定义
+
+```typescript
+import type { Agent } from "@opencode-ai/sdk"
+
+// Agent 结构
+interface Agent {
+  name: string
+  description?: string
+  mode: "subagent" | "primary" | "all"
+  native?: boolean
+  hidden?: boolean
+  topP?: number
+  temperature?: number
+  color?: string
+  permission: PermissionRuleset
+  model?: {
+    modelID: string
+    providerID: string
+  }
+  variant?: string
+  prompt?: string
+  options: Record<string, any>
+  steps?: number
 }
 ```
 

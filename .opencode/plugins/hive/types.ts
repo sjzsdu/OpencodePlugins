@@ -1,5 +1,3 @@
-import type { AgentConfig } from "@opencode-ai/sdk"
-
 // === Domain ===
 
 export interface Domain {

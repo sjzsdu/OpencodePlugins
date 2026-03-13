@@ -1,5 +1,5 @@
-import type { OpencodeClient } from "@opencode-ai/sdk"
-import type { Part } from "@opencode-ai/sdk"
+import type { OpencodeClient } from "sjz-opencode-sdk"
+import type { Part } from "sjz-opencode-sdk"
 import type { HiveEventBus } from "../eventbus/bus"
 import type { Domain, HiveConfig } from "../types"
 
