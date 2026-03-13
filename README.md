@@ -117,8 +117,9 @@ Pick one or more.
 │           └── hooks/                   # config, system-transform, file-watcher, autonomy
 ├── package.json                         # Build tooling (private)
 ├── tsconfig.json                        # TypeScript config
+├── .hive/                               # Hive runtime data (events.json, domains.json)
 └── .github/workflows/
-    ├── ci.yml                           # Type check + tests
+    ├── ci.yml                           # Type check + tests (triggers on .hive/, .opencode/plugins/**, tsconfig.json, package.json)
     └── npm-publish.yml                  # Tag-based selective publish
 ```
 

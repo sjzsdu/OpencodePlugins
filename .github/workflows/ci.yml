@@ -4,12 +4,14 @@ on:
   push:
     branches: [main]
     paths:
+      - '.hive/**'
       - '.opencode/plugins/**'
       - 'tsconfig.json'
       - 'package.json'
   pull_request:
     branches: [main]
     paths:
+      - '.hive/**'
       - '.opencode/plugins/**'
       - 'tsconfig.json'
       - 'package.json'

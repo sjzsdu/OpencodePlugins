@@ -103,8 +103,9 @@
 │           └── skills/                  # 内置技能
 ├── package.json                         # 构建工具（私有）
 ├── tsconfig.json                        # TypeScript 配置
+├── .hive/                              # Hive 运行时数据（events.json, domains.json）
 └── .github/workflows/
-    ├── ci.yml                           # 类型检查 + 测试
+    ├── ci.yml                           # 类型检查 + 测试（触发条件：.hive/, .opencode/plugins/**, tsconfig.json, package.json）
     └── npm-publish.yml                  # 基于 Tag 的选择性发布
 ```
 
