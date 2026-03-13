@@ -1,4 +1,4 @@
-import type { Agent, AgentConfig } from "@opencode-ai/sdk"
+import type { Agent, AgentConfig } from "sjz-opencode-sdk"
 import type { Domain, HiveConfig } from "../types"
 import { buildDomainPrompt, buildQueenPrompt } from "./prompts"
 
@@ -7,10 +7,9 @@ const COLORS = [
   "#EC4899", "#06B6D4", "#84CC16", "#F97316", "#6366F1",
 ]
 
-const defaultPermission: Agent["permission"] = {
-  edit: "allow",
-  bash: { "*": "allow" },
-}
+const defaultPermission: Agent["permission"] = [
+  { permission: "tool", pattern: ".*", action: "allow" as const },
+]
 
 export function generateAgents(
   domains: Domain[],
