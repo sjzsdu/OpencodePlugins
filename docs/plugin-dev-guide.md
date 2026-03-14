@@ -63,6 +63,8 @@ export type PluginInput = {
   listAgents(): Promise<Agent[]>
   registerCommand(cmd: CommandInput): Promise<void>
   unregisterCommand(name: string): Promise<void>
+  registerSkill(skill: SkillInput): Promise<void>
+  unregisterSkill(name: string): Promise<void>
 }
 
 export type Plugin = (input: PluginInput) => Promise<Hooks>
@@ -931,6 +933,140 @@ export default async function myPlugin(input: PluginInput): Promise<Hooks> {
   }
 }
 ```
+
+---
+
+## 动态 Skill 注册
+
+OpenCode 支持在运行时动态注册和注销 Skill，无需重启或修改配置文件。
+
+### Skill 是什么
+
+Skill 是提供特定领域指令和工作流程的技能模块。用户可以在对话中通过 `skill` 工具加载这些技能，加载后的技能会向对话上下文注入详细的指令和工作流程。
+
+### SkillInput 类型
+
+```typescript
+export type SkillInput = {
+  name: string // Skill 名称
+  description: string // Skill 描述
+  content: string // Skill 内容（Markdown 格式）
+}
+```
+
+### 注册 Skill
+
+```typescript
+export default async function myPlugin(input: PluginInput): Promise<Hooks> {
+  await input.registerSkill({
+    name: "code-review",
+    description: "Expert code review assistant",
+    content: `# Skill: Code Review
+
+You are an expert code reviewer. When reviewing code:
+
+1. Check for potential bugs and security vulnerabilities
+2. Look for code smells and anti-patterns
+3. Suggest performance optimizations
+4. Verify test coverage
+
+## Review Checklist
+
+- [ ] Input validation
+- [ ] Error handling
+- [ ] Resource cleanup
+- [ ] Documentation
+`,
+  })
+
+  return {}
+}
+```
+
+注册后，用户可以通过 `/skill` 工具加载这个技能，或者在对话中提到相关任务时自动加载。
+
+### Skill 内容格式
+
+Skill 内容使用 Markdown 格式，支持以下特殊标记：
+
+```markdown
+# Skill: {name}
+
+技能描述...
+
+## Instructions
+
+详细指令...
+
+## Examples
+
+示例...
+
+<skill_files>
+files/...
+</skill_files>
+```
+
+### 动态 Skill 的位置信息
+
+动态注册的 Skill 没有文件位置，因此显示为 `(dynamic)`：
+
+```xml
+<skill>
+  <name>code-review</name>
+  <description>Expert code review assistant</description>
+  <location>(dynamic)</location>
+</skill>
+```
+
+### 注销 Skill
+
+```typescript
+await input.unregisterSkill("code-review")
+```
+
+### 结合工具和 Skill
+
+可以将 Skill 与自定义工具结合使用，提供更完整的功能：
+
+```typescript
+export default async function myPlugin(input: PluginInput): Promise<Hooks> {
+  // 注册自定义工具
+  await input.registerTool({
+    name: "analyze-pr",
+    description: "Analyze a pull request",
+    args: {
+      prUrl: z.string().describe("PR URL to analyze"),
+    },
+    async execute(args, context) {
+      // 分析 PR 的逻辑
+      return `Analyzed PR: ${args.prUrl}`
+    },
+  })
+
+  // 注册配套的 Skill
+  await input.registerSkill({
+    name: "pr-review",
+    description: "Pull request review assistant",
+    content: `# Skill: PR Review
+
+Use the \`analyze-pr\` tool to analyze pull requests.
+Provide detailed feedback on code quality, security, and performance.
+`,
+  })
+
+  return {}
+}
+```
+
+### 与静态 Skill 的区别
+
+| 特性   | 静态 Skill                                       | 动态 Skill        |
+| ------ | ------------------------------------------------ | ----------------- |
+| 来源   | 文件系统 (`.claude/skills/`, `.opencode/skill/`) | 代码动态注册      |
+| 位置   | 有文件路径                                       | `(dynamic)`       |
+| 持久化 | 配置文件或目录                                   | 仅运行时有效      |
+| 更新   | 修改文件后重启                                   | 重新调用 register |
 
 ---
 

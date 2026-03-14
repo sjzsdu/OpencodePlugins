@@ -4,6 +4,7 @@
     "oh-my-opencode@latest",
     "./plugins/emperor/index.ts",
     "./plugins/commander/index.ts",
-    "./plugins/hive/index.ts"
+    "./plugins/hive/index.ts",
+    "./plugins/superpower/index.ts"
   ]
 }

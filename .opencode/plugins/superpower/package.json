@@ -1,7 +1,7 @@
 {
-  "name": "opencode-plugin-hive",
+  "name": "opencode-plugin-superpower",
   "version": "0.1.0",
-  "description": "Hive — Dynamic domain-agent coordination plugin for OpenCode",
+  "description": "Superpower plugin for OpenCode",
   "main": "index.ts",
   "types": "index.ts",
   "type": "module",
@@ -17,15 +17,12 @@
   "keywords": [
     "opencode",
     "opencode-plugin",
-    "hive",
-    "multi-agent",
-    "domain-discovery",
-    "agent-coordination"
+    "superpower"
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sjzsdu/OpencodePlugins.git",
-    "directory": ".opencode/plugins/hive"
+    "url": "git+https://github.com/sjzsdu/emperor.git",
+    "directory": ".opencode/plugins/superpower"
   },
   "author": "sunjuzhong",
   "license": "MIT"
