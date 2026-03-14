@@ -10,7 +10,13 @@ export function mergeDomains(
     const override = userOverrides[domain.id]
     if (override?.disabled) continue  // User disabled this domain
     if (override) {
-      result.push({ ...domain, ...override })  // User overrides fields
+      // Only override fields that are explicitly provided, preserving paths if not specified
+      const merged = { ...domain, ...override }
+      // Ensure paths is always an array
+      if (!merged.paths) {
+        merged.paths = domain.paths || []
+      }
+      result.push(merged)
     } else {
       result.push(domain)
     }

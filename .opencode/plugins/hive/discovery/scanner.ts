@@ -46,6 +46,7 @@ function resolveWorkspaces(directory: string, workspaces: string[] | { packages:
   const domains: Domain[] = []
 
   for (const pattern of patterns) {
+    if (!pattern) continue // Skip undefined patterns
     // Simple glob resolution: "packages/*" → list dirs in packages/
     const base = pattern.replace(/\/?\*$/, "")
     const dirPath = join(directory, base)
@@ -90,10 +91,10 @@ function resolvePnpmWorkspaces(directory: string, pnpmPath: string): Domain[] {
         inPackages = true
         continue
       }
-      if (inPackages && line.trim().startsWith("- ")) {
+      if (inPackages && line && line.trim().startsWith("- ")) {
         const pkg = line.trim().replace(/^- ['"]?/, "").replace(/['"]?$/, "")
-        packages.push(pkg)
-      } else if (inPackages && !line.startsWith(" ") && !line.startsWith("\t") && line.trim() !== "") {
+        if (pkg) packages.push(pkg)
+      } else if (inPackages && line && !line.startsWith(" ") && !line.startsWith("\t") && line.trim() !== "") {
         inPackages = false
       }
     }

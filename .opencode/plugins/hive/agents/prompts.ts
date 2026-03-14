@@ -6,7 +6,7 @@ export function buildDomainPrompt(domain: Domain): string {
 ## 你的领域
 - **职责**: ${domain.responsibilities}
 - **技术栈**: ${domain.techStack}
-- **管辖范围**: ${domain.paths.join(", ")}
+- **管辖范围**: ${domain.paths?.join(", ") || "无"}
 - **对外接口**: ${domain.interfaces.join(", ") || "无"}
 - **依赖的Domain**: ${domain.dependencies.join(", ") || "无"}
 
@@ -50,12 +50,14 @@ ${domain.conventions.length > 0 ? domain.conventions.map(c => `- ${c}`).join("\n
 `
 }
 
-export function buildDependencyGraph(domains: Domain[]): string {
+export function buildDependencyGraph(domains: Array<{ id: string; dependencies?: string[] }>): string {
   const lines: string[] = []
   for (const domain of domains) {
-    if (domain.dependencies.length > 0) {
+    if (domain.dependencies && domain.dependencies.length > 0) {
       for (const dep of domain.dependencies) {
-        lines.push(`${domain.id} → ${dep}`)
+        if (dep) {
+          lines.push(`${domain.id} → ${dep}`)
+        }
       }
     }
   }
@@ -64,13 +66,25 @@ export function buildDependencyGraph(domains: Domain[]): string {
 }
 
 export function buildQueenPrompt(domains: Domain[]): string {
+  // 确保domains是数组
+  if (!Array.isArray(domains)) {
+    domains = []
+  }
+  
+  // 确保每个domain都有必要的属性
+  const safeDomains = domains.map(d => ({
+    id: d.id || "unknown",
+    description: d.description || "未知领域",
+    paths: d.paths || []
+  }))
+  
   return `你是 Hive 的协调者（Queen）。你是项目的总指挥，负责理解需求、澄清问题、协调各Domain Agent完成任务。
 
 ## 已注册的Domain Agent
-${domains.map(d => `- **@${d.id}**: ${d.description} (管辖: ${d.paths.join(", ")})`).join("\n")}
+${safeDomains.map(d => `- **@${d.id}**: ${d.description} (管辖: ${d.paths.join(", ") || "无"})`).join("\n")}
 
 ## Domain间依赖关系
-${buildDependencyGraph(domains)}
+${buildDependencyGraph(safeDomains)}
 
 ## 你的核心职责
 

@@ -28,6 +28,10 @@ export function generateAgents(
 
   for (let i = 0; i < domains.length; i++) {
     const domain = domains[i]
+    // Ensure paths is always an array
+    if (!domain.paths) {
+      domain.paths = []
+    }
     agents[domain.id] = {
       name: domain.id,
       description: `${domain.name} — ${domain.description}`,
@@ -43,6 +47,14 @@ export function generateAgents(
 
 export function toAgent(config: AgentConfig): Agent {
   const name = typeof config.name === "string" ? config.name : "unknown"
+  // Permission must be PermissionRuleset format (array of { permission, pattern, action })
+  // at runtime for the V2 registerAgent API, even though the old Agent type expects config-style.
+  const permission = [
+    { permission: "edit", pattern: "*", action: "allow" },
+    { permission: "bash", pattern: "*", action: "allow" },
+    { permission: "read", pattern: "*", action: "allow" },
+    { permission: "write", pattern: "*", action: "allow" },
+  ] as unknown as Agent["permission"]
   return {
     name,
     description: config.description,
@@ -50,10 +62,7 @@ export function toAgent(config: AgentConfig): Agent {
     builtIn: false,
     color: config.color,
     prompt: config.prompt,
-    permission: {
-      edit: "allow",
-      bash: { "*": "allow" },
-    },
+    permission,
     tools: config.tools || { read: true, write: true, edit: true, bash: true, grep: true, glob: true },
     options: {},
   }
