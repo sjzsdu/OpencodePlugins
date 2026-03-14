@@ -66,8 +66,11 @@ export function buildDependencyGraph(domains: Array<{ id: string; dependencies?:
 }
 
 export function buildQueenPrompt(domains: Domain[]): string {
-  const domainLines = (domains || []).map(d => `- ${d.id ?? d.name ?? "unknown"}`).join("\n")
-  const domainInfo = (domains || []).map(d => `${d.name ?? d.id ?? ''}`).join(", ")
+  if (!Array.isArray(domains)) domains = []
+
+  const domainLines = domains
+    .map(d => `- **@${d.id}**: ${d.description || "未知领域"} (管辖: ${d.paths?.join(", ") || "无"})`)
+    .join("\n")
 
   return `你是 Hive 的协调者（Queen）。
 

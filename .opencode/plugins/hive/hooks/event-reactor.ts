@@ -1,19 +1,11 @@
 import type { OpencodeClient } from "sjz-opencode-sdk"
-import type { Part } from "sjz-opencode-sdk"
 import type { HiveEventBus } from "../eventbus/bus"
-import type { Domain } from "../types"
+import type { Domain, EventType } from "../types"
 
-function extractText(parts: Part[]): string {
-  return parts
-    .filter((p): p is Extract<Part, { type: "text" }> => p.type === "text")
-    .map((p) => (p as any).text)
-    .join("\n")
-}
-
-const REACTIVE_EVENT_TYPES = [
+const REACTIVE_EVENT_TYPES: ReadonlySet<EventType> = new Set([
   "breaking_change",
   "conflict_detected",
-] as const
+])
 
 export function createEventReactorHook(
   eventBus: HiveEventBus,
@@ -21,28 +13,38 @@ export function createEventReactorHook(
   client: OpencodeClient,
   sessionToDomain: Map<string, string>,
 ) {
-  const processing = new Set<string>()
+  const processed = new Set<string>()
+  let pipelineRunning = false
+
+  eventBus.onEvent((event) => {
+    if (event.type === "pipeline_started") pipelineRunning = true
+    if (event.type === "pipeline_completed" || event.type === "pipeline_failed") pipelineRunning = false
+  })
 
   return async (
     input: { tool: string; sessionID: string; callID: string; args: any },
     output: { title: string; output: string; metadata: any },
   ) => {
-    
     if (input.tool !== "write" && input.tool !== "edit") return
+    if (pipelineRunning) return
 
+    const allEvents = eventBus.getAll()
     for (const domain of domains) {
-      const pending = eventBus.consume(domain.id)
-      const reactive = pending.filter(e =>
-        REACTIVE_EVENT_TYPES.includes((e.type as any)) && !processing.has((e as any).id)
+      const reactive = allEvents.filter(e =>
+        e.status === "pending"
+        && !e.consumed.includes(domain.id)
+        && e.source !== domain.id
+        && (e.target === domain.id || e.target === "*")
+        && REACTIVE_EVENT_TYPES.has(e.type)
+        && !processed.has(e.id),
       )
       if (reactive.length === 0) continue
 
       for (const event of reactive) {
-        const evt = event as any
-        processing.add(evt.id)
+        processed.add(event.id)
         try {
           const session = await client.session.create({
-            body: { title: `Hive·${domain.name}·响应·${evt.type}` },
+            body: { title: `Hive·${domain.name}·响应·${event.type}` },
           })
           sessionToDomain.set(session.data!.id, domain.id)
 
@@ -52,17 +54,23 @@ export function createEventReactorHook(
               agent: domain.id,
               parts: [{
                 type: "text" as const,
-                text:
-                  `你收到了一个需要立即响应的事件：\n\n` +
-                  `**类型**: ${evt.type}\n` +
-                  `**来源**: @${evt.source}\n` +
-                  `**内容**: ${evt.payload?.message ?? extractText(evt.payload?.parts ?? [])}\n\n` +
-                  `请：\n1. 评估对你领域的影响\n2. 如果需要修改代码，立即执行\n3. 通过 hive_emit 报告处理结果`,
+                text: [
+                  `你收到了一个需要立即响应的事件：`,
+                  ``,
+                  `**类型**: ${event.type}`,
+                  `**来源**: @${event.source}`,
+                  `**内容**: ${event.payload.message}`,
+                  ``,
+                  `请：`,
+                  `1. 评估对你领域的影响`,
+                  `2. 如果需要修改代码，立即执行`,
+                  `3. 通过 hive_emit 报告处理结果`,
+                ].join("\n"),
               }],
             },
           })
         } catch {
-          // ignore reaction failures
+          // skip failed reactions
         }
       }
     }

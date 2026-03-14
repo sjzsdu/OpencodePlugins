@@ -47,14 +47,15 @@ export function generateAgents(
 
 export function toAgent(config: AgentConfig): Agent {
   const name = typeof config.name === "string" ? config.name : "unknown"
-  // Permission must be PermissionRuleset format (array of { permission, pattern, action })
-  // at runtime for the V2 registerAgent API, even though the old Agent type expects config-style.
-  const permission = [
-    { permission: "edit", pattern: "*", action: "allow" },
-    { permission: "bash", pattern: "*", action: "allow" },
-    { permission: "read", pattern: "*", action: "allow" },
-    { permission: "write", pattern: "*", action: "allow" },
-  ] as unknown as Agent["permission"]
+  // PermissionRuleset format for V2 registerAgent API (old Agent type expects config-style)
+  const allPermissions = [
+    "edit", "bash", "read", "write", "webfetch", "grep", "glob", "list",
+    "task", "todowrite", "todoread", "skill", "lsp", "websearch",
+    "codesearch", "question", "doom_loop", "external_directory",
+  ]
+  const permission = allPermissions.map(p => ({
+    permission: p, pattern: "*", action: "allow",
+  })) as unknown as Agent["permission"]
   return {
     name,
     description: config.description,

@@ -12,11 +12,6 @@ const GLOBAL_EVENT_TYPES: EventType[] = [
   "conflict_detected",
   "file_changed",
   "action_proposal",
-  // Pipeline lifecycle events
-  "pipeline_started",
-  "pipeline_phase",
-  "pipeline_completed",
-  "pipeline_failed",
 ]
 
 export class HiveEventBus {
