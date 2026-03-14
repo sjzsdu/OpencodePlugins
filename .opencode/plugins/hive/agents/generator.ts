@@ -19,6 +19,7 @@ export function generateAgents(
     mode: "primary",
     color: "#F59E0B",
     prompt: buildQueenPrompt(domains),
+    tools: { read: true, write: true, edit: true, bash: true, grep: true, glob: true, webfetch: true },
   }
   if (config.queen.model) {
     queenConfig.model = config.queen.model
@@ -33,6 +34,7 @@ export function generateAgents(
       mode: "all",
       color: COLORS[i % COLORS.length],
       prompt: buildDomainPrompt(domain),
+      tools: { read: true, write: true, edit: true, bash: true, grep: true, glob: true },
     }
   }
 
