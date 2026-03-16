@@ -4,7 +4,12 @@ import type { OpencodeClient } from "@opencode-ai/sdk"
 import type { TaskStore, CommanderConfig } from "../types"
 import { runPipeline } from "../engine/pipeline"
 
-export function createTaskTool(client: OpencodeClient, store: TaskStore, config: CommanderConfig) {
+export function createTaskTool(
+  client: OpencodeClient,
+  store: TaskStore,
+  config: CommanderConfig,
+  directory?: string,
+) {
   return tool({
     description: `创建任务：将需求交由 Commander 团队（Lead + Coder + Tester + Reviewer）协作完成。适用于需要多步骤实现的任务。单一简单改动请直接处理，不要创建任务。`,
     args: {
@@ -26,7 +31,13 @@ export function createTaskTool(client: OpencodeClient, store: TaskStore, config:
       })
 
       try {
-        const report = await runPipeline(task, context, client, store, config)
+        // Create a parent session for this task's pipeline and pass it down
+        const parentSession = await client.session.create({
+          body: { title: `Commander·${args.title}` },
+          ...(directory ? { query: { directory } } : {}),
+        })
+        const parentSessionId = parentSession.data?.id
+        const report = await runPipeline(task, context, client, store, config, directory, parentSessionId)
         return report
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)

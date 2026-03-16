@@ -49,12 +49,22 @@ export function createStatusTool(store: TaskStore) {
           lines.push("", "### 子任务")
           lines.push("| # | 标题 | 工作量 | 状态 |")
           lines.push("|---|------|--------|------|")
-          for (const st of task.plan.subtasks) {
+        for (const st of task.plan.subtasks) {
             const exec = task.executions.find((e) => e.subtaskIndex === st.index)
             const stStatus = exec?.status === "completed" ? "✅" : exec?.status === "failed" ? "❌" : "⏳"
             const rounds = exec?.fixAttempts.length ?? 0
             const roundNote = rounds > 1 ? ` (${rounds - 1} 轮修复)` : ""
             lines.push(`| ${st.index} | ${st.title} | ${st.effort} | ${stStatus}${roundNote} |`)
+          }
+        }
+
+        // Sessions (pipeline tracking)
+        if (task.sessions && task.sessions.length > 0) {
+          lines.push("", "## 会话")
+          lines.push("| Agent | 阶段 | Session ID |")
+          lines.push("|-------|------|-----------|")
+          for (const s of task.sessions) {
+            lines.push(`| ${s.agent} | ${s.phase} | ${s.sessionId} |`)
           }
         }
 

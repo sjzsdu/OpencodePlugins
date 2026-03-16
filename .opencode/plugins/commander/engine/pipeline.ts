@@ -1,36 +1,12 @@
 import type { OpencodeClient } from "@opencode-ai/sdk"
 import type { Part } from "@opencode-ai/sdk"
 import type { ToolContext } from "@opencode-ai/plugin"
-import type { Task, TaskStore, CommanderConfig, Plan } from "../types"
+import type { Task, TaskStore, CommanderConfig, Plan, PipelineSession } from "../types"
 import { classifyComplexity } from "./classifier"
 import { dispatchAll } from "./dispatcher"
+import { extractText, parseJSON } from "../utils"
 
-function extractText(parts: Part[]): string {
-  return parts
-    .filter((p): p is Extract<Part, { type: "text" }> => p.type === "text")
-    .map((p) => p.text)
-    .join("\n")
-}
-
-function parseJSON(text: string): unknown {
-  try {
-    return JSON.parse(text)
-  } catch {}
-  const codeBlockMatch = text.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/)
-  if (codeBlockMatch) {
-    try {
-      return JSON.parse(codeBlockMatch[1])
-    } catch {}
-  }
-  const first = text.indexOf("{")
-  const last = text.lastIndexOf("}")
-  if (first !== -1 && last > first) {
-    try {
-      return JSON.parse(text.slice(first, last + 1))
-    } catch {}
-  }
-  return null
-}
+// Shared helpers (extracted to utils.ts)
 
 function parsePlan(text: string): Plan {
   const data = parseJSON(text)
@@ -69,7 +45,12 @@ export async function runPipeline(
   client: OpencodeClient,
   store: TaskStore,
   config: CommanderConfig,
+  directory?: string,
+  parentSessionId?: string,
 ): Promise<string> {
+  const sessions: PipelineSession[] = []
+  // ========================================
+  // Phase 1: Lead analyzes and plans
   // ========================================
   // Phase 1: Lead analyzes and plans
   // ========================================
@@ -77,9 +58,14 @@ export async function runPipeline(
   client.tui.showToast({ body: { message: "🔍 Lead: 分析需求中...", variant: "info" } })
 
   const leadSession = await client.session.create({
-    body: { title: `Lead·${task.title}` },
+    body: {
+      title: `Lead·${task.title}`,
+      ...(parentSessionId ? { parentID: parentSessionId } : {}),
+    },
+    ...(directory ? { query: { directory } } : {}),
   })
   const leadSessionId = leadSession.data!.id
+  sessions.push({ sessionId: leadSessionId, phase: "analyzing", agent: "lead", title: `Lead·${task.title}`, createdAt: Date.now() })
 
   const analyzePrompt = `请分析以下任务需求，探索代码库，制定执行计划。
 
@@ -174,7 +160,8 @@ ${plan.analysis}
 
   checkAbort(context.abort)
 
-  const executions = await dispatchAll(client, task, config.pipeline.maxFixLoops)
+  const sessionContext = parentSessionId ? { parentSessionId, directory: directory ?? "" } : undefined
+  const executions = await dispatchAll(client, task, config.pipeline.maxFixLoops, sessionContext)
   store.update(task.id, { executions })
 
   checkAbort(context.abort)
@@ -188,8 +175,13 @@ ${plan.analysis}
     client.tui.showToast({ body: { message: "🔍 Reviewer: 审查代码中...", variant: "info" } })
 
     const reviewerSession = await client.session.create({
-      body: { title: `Reviewer·${task.title}` },
+      body: {
+        title: `Reviewer·${task.title}`,
+        ...(parentSessionId ? { parentID: parentSessionId } : {}),
+      },
+      ...(directory ? { query: { directory } } : {}),
     })
+    sessions.push({ sessionId: reviewerSession.data!.id, phase: "reviewing", agent: "reviewer", title: `Reviewer·${task.title}`, createdAt: Date.now() })
 
     const executionSummary = executions
       .map((exec) => {
@@ -276,7 +268,14 @@ ${reviewResult ? "5" : "4"}. 总结评估
   })
 
   const report = extractText(summaryResponse.data?.parts ?? [])
-  store.update(task.id, { report, status: "completed" })
+  // Persist pipeline sessions if any were created
+  if (sessions.length > 0) {
+    const current = store.get(task.id)
+    const existing = current?.sessions ?? []
+    store.update(task.id, { sessions: [...existing, ...sessions], report, status: "completed" })
+  } else {
+    store.update(task.id, { report, status: "completed" })
+  }
   client.tui.showToast({ body: { message: "📋 Lead: 任务完成", variant: "success" } })
 
   return report

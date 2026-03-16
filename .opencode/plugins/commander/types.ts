@@ -14,6 +14,17 @@ export type TaskStatus =
   | "failed"      // Unrecoverable error
   | "halted"      // User stopped
 
+// Pipeline tracking types
+export type PipelinePhase = "analyzing" | "planning" | "executing" | "verifying" | "reviewing" | "completed"
+
+export interface PipelineSession {
+  sessionId: string
+  phase: PipelinePhase
+  agent: string
+  title: string
+  createdAt: number
+}
+
 export type Complexity = "trivial" | "simple" | "standard" | "complex"
 
 // --- Task and Plan ---
@@ -28,6 +39,7 @@ export interface Task {
   plan?: Plan
   executions: Execution[]
   report?: string
+  sessions?: PipelineSession[]
   createdAt: number
   updatedAt: number
 }

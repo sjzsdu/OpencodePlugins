@@ -1,13 +1,9 @@
 import type { OpencodeClient } from "@opencode-ai/sdk"
 import type { Part } from "@opencode-ai/sdk"
+import { extractText } from "../utils"
 import type { Task, Subtask, Execution, FixAttempt } from "../types"
 
-function extractText(parts: Part[]): string {
-  return parts
-    .filter((p): p is Extract<Part, { type: "text" }> => p.type === "text")
-    .map((p) => p.text)
-    .join("\n")
-}
+// extracted: use shared extractText from utils
 
 /**
  * Group subtasks into execution waves based on dependencies (Kahn's algorithm).
@@ -65,6 +61,7 @@ export async function executeSubtask(
   task: Task,
   subtask: Subtask,
   maxFixLoops: number,
+  sessionContext?: { parentSessionId?: string; directory?: string },
 ): Promise<Execution> {
   const execution: Execution = {
     subtaskIndex: subtask.index,
@@ -77,15 +74,31 @@ export async function executeSubtask(
 
   // Create Coder session
   const coderSession = await client.session.create({
-    body: { title: `Coder·${subtask.title}` },
+    body: {
+      title: `Coder·${subtask.title}`,
+      ...(sessionContext?.parentSessionId ? { parentID: sessionContext.parentSessionId } : {}),
+    },
+    ...(sessionContext?.directory ? { query: { directory: sessionContext.directory } } : {}),
   })
   execution.coderSessionId = coderSession.data!.id
+  // Track coder session in task sessions if available
+  if (task.sessions) {
+    task.sessions.push({ sessionId: coderSession.data!.id, phase: "executing", agent: "coder", title: `Coder·${subtask.title}`, createdAt: Date.now() })
+  }
 
   // Create Tester session
   const testerSession = await client.session.create({
-    body: { title: `Tester·${subtask.title}` },
+    body: {
+      title: `Tester·${subtask.title}`,
+      ...(sessionContext?.parentSessionId ? { parentID: sessionContext.parentSessionId } : {}),
+    },
+    ...(sessionContext?.directory ? { query: { directory: sessionContext.directory } } : {}),
   })
   execution.testerSessionId = testerSession.data!.id
+  // Track tester session in task sessions if available
+  if (task.sessions) {
+    task.sessions.push({ sessionId: testerSession.data!.id, phase: "verifying", agent: "tester", title: `Tester·${subtask.title}`, createdAt: Date.now() })
+  }
 
   // --- Round 0: Initial implementation ---
   client.tui.showToast({
@@ -279,6 +292,7 @@ export async function dispatchAll(
   client: OpencodeClient,
   task: Task,
   maxFixLoops: number,
+  sessionContext?: { parentSessionId?: string; directory?: string },
 ): Promise<Execution[]> {
   const plan = task.plan
   if (!plan) {
@@ -303,9 +317,23 @@ export async function dispatchAll(
       },
     })
 
-    const waveResults = await Promise.all(
-      wave.map((subtask) => executeSubtask(client, task, subtask, maxFixLoops)),
+    const settled = await Promise.allSettled(
+      wave.map((subtask) => executeSubtask(client, task, subtask, maxFixLoops, sessionContext)),
     )
+    const waveResults: Execution[] = settled.map((r, idx) => {
+      if (r.status === "fulfilled") return r.value
+      const subtask = wave[idx]
+      return {
+        subtaskIndex: subtask.index,
+        coderSessionId: "",
+        testerSessionId: "",
+        status: "failed" as const,
+        fixAttempts: [],
+        error: r.reason instanceof Error ? r.reason.message : String(r.reason),
+        startedAt: Date.now(),
+        completedAt: Date.now(),
+      }
+    })
 
     // Count results for this wave
     const waveCompleted = waveResults.filter((e) => e.status === "completed").length

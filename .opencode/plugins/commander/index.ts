@@ -13,7 +13,7 @@ export const CommanderPlugin: Plugin = async ({ client, project, directory, work
 
   return {
     config: async (openCodeConfig) => {
-      const configAny = openCodeConfig as any
+      const configAny = openCodeConfig
       if (!configAny.agent) {
         configAny.agent = {}
       }
@@ -44,7 +44,7 @@ export const CommanderPlugin: Plugin = async ({ client, project, directory, work
       }
     },
     tool: {
-      cmd_task: createTaskTool(client, store, config),
+      cmd_task: createTaskTool(client, store, config, directory),
       cmd_status: createStatusTool(store),
       cmd_halt: createHaltTool(client, store),
     },
