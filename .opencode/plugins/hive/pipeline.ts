@@ -124,6 +124,7 @@ export class HivePipeline {
       sessions: [],
       assessments: [],
       dispatched: [],
+      verified: [],
     }
 
     try {
@@ -160,6 +161,8 @@ export class HivePipeline {
     })
 
     // Phase 1: Assess (parallel)
+    // Track per-domain assess sessions for potential reuse
+    const assessSessionMap = new Map<string, string>()
     progress(`🔍 评估中... (0/${this.domains.length})`)
     this.log("assess", `🔍 开始评估 ${this.domains.length} 个域...`)
     const assessResults = await Promise.allSettled(
@@ -171,6 +174,7 @@ export class HivePipeline {
         })
         const sessionId = session.data!.id
         this.sessionToDomain.set(sessionId, domain.id)
+        assessSessionMap.set(domain.id, sessionId)
         this.trackSession(sessionId, domain.id, "assess", assessTitle)
         const prompt = [
           `以下是一个新的需求，请评估是否与你的领域相关，以及你需要做什么：`,
@@ -222,6 +226,9 @@ export class HivePipeline {
     const assessmentMap = new Map<string, typeof relevant[0]>()
     relevant.forEach((a) => assessmentMap.set(a.domain, a))
 
+    // Determine if we are in single-domain mode (for short-circuit)
+    const singleDomain = relevantDomains.length === 1
+
     // Find dependency pairs where BOTH sides are relevant
     const depPairs: Array<{ depender: string; provider: string }> = []
     for (const a of relevant) {
@@ -237,7 +244,7 @@ export class HivePipeline {
     // negotiation results: keyed by "depender->provider"
     const negotiations = new Map<string, { depender: string; provider: string; request: string; response: string }>()
 
-    if (depPairs.length > 0) {
+    if (depPairs.length > 0 && !singleDomain) {
       progress(`🤝 协商中... (0/${depPairs.length})`)
       this.log("negotiate", `🤝 开始协商 ${depPairs.length} 对域间接口...`)
       for (const pair of depPairs) {
@@ -339,7 +346,11 @@ export class HivePipeline {
         }
       }
     } else {
-      this.log("negotiate", `⏭️ 无跨域依赖，跳过协商`)
+      if (singleDomain) {
+        this.log("negotiate", `⚡ 单域模式，跳过协商`)
+      } else {
+        this.log("negotiate", `⏭️ 无跨域依赖，跳过协商`)
+      }
     }
 
     // Phase 4: Dispatch (parallel waves respecting dependencies)
@@ -442,11 +453,19 @@ export class HivePipeline {
         wave.map(async (domainId) => {
           const domain = this.domains.find((d) => d.id === domainId)!
           const execTitle = `Hive·${domain.name}·执行`
-          const session = await this.client.session.create({
-            body: { title: execTitle, parentID: parentSessionId },
-            query: { directory },
-          })
-          const sessionId = session.data!.id
+          // Reuse assess session if exists for this domain
+          let sessionId: string
+          const existingSessionId = assessSessionMap.get(domainId)
+          if (existingSessionId) {
+            sessionId = existingSessionId
+          } else {
+            const session = await this.client.session.create({
+              body: { title: execTitle, parentID: parentSessionId },
+              query: { directory },
+            })
+            sessionId = session.data!.id
+            assessSessionMap.set(domainId, sessionId)
+          }
           this.sessionToDomain.set(sessionId, domainId)
           this.trackSession(sessionId, domainId, "dispatch", execTitle)
           this.currentPipeline!.dispatched.push({ domain: domainId, status: "running", sessionId })
@@ -485,15 +504,82 @@ export class HivePipeline {
       }
     }
 
-    // Phase 5: Report
+    // Phase 5: Verify
+    const succeeded = this.currentPipeline!.dispatched.filter((d) => d.status === "completed")
+    if (succeeded.length > 0) {
+      progress(`🔍 验证中... (0/${succeeded.length})`)
+      this.log("verify", `🔍 开始验证 ${succeeded.length} 个域的修改...`)
+
+      const verifyResults = await Promise.allSettled(
+        succeeded.map(async (d) => {
+          const domain = this.domains.find((dom) => dom.id === d.domain)!
+          const verifyTitle = `Hive·${domain.name}·验证`
+          const verifySession = await this.client.session.create({
+            body: { title: verifyTitle, parentID: parentSessionId },
+            query: { directory },
+          })
+          const verifySessionId = verifySession.data!.id
+          this.sessionToDomain.set(verifySessionId, d.domain)
+          this.trackSession(verifySessionId, d.domain, "verify", verifyTitle)
+
+          const verifyPrompt = [
+            `请验证你刚才的代码修改是否正确。`,
+            ``,
+            `## 你的修改摘要`,
+            d.response?.substring(0, 800) ?? "（无摘要）",
+            ``,
+            `## 验证步骤`,
+            `1. 运行构建命令，确认编译通过`,
+            `2. 运行相关测试，确认测试通过`,
+            `3. 检查是否有遗漏的修改`,
+            ``,
+            `## 返回格式（严格按此格式）`,
+            `- **构建结果**: 通过/失败`,
+            `- **测试结果**: 通过/失败`,
+            `- **变更文件**: 列出所有修改/创建的文件路径`,
+            `- **问题**: 如有问题，描述具体问题`,
+          ].join("\n")
+
+          const resp = await this.client.session.prompt({
+            path: { id: verifySessionId },
+            body: { agent: d.domain, parts: [{ type: "text" as const, text: verifyPrompt }] },
+          })
+          const text = this.extractText(resp.data?.parts ?? [])
+          const buildPassed = /构建结果[:：]?\s*通过/i.test(text) ? true : /构建结果[:：]?\s*失败/i.test(text) ? false : null
+          const testsPassed = /测试结果[:：]?\s*通过/i.test(text) ? true : /测试结果[:：]?\s*失败/i.test(text) ? false : null
+          const issues = buildPassed === false || testsPassed === false ? text : ""
+
+          // Push into verify state
+          this.currentPipeline!.verified.push({ domain: d.domain, buildPassed, testsPassed, issues })
+          const done = this.currentPipeline!.verified.length
+          progress(`🔍 验证中... (${done}/${succeeded.length})`)
+          this.log("verify", `${buildPassed !== false && testsPassed !== false ? "✅" : "❌"} @${d.domain} 验证完成`, d.domain)
+          return { domain: d.domain, buildPassed, testsPassed, issues }
+        }),
+      )
+
+      for (const result of verifyResults) {
+        if (result.status === "rejected") {
+          const errMsg = result.reason instanceof Error ? result.reason.message : String(result.reason)
+          this.log("verify", `❌ 验证异常: ${errMsg}`)
+        }
+      }
+    }
+
+    // Compute verification summary (after verify phase has populated verified[])
+    const verifyLines = this.currentPipeline!.verified.map((v) => {
+      const bIcon = v.buildPassed === true ? "✅" : v.buildPassed === false ? "❌" : "⏭️"
+      const tIcon = v.testsPassed === true ? "✅" : v.testsPassed === false ? "❌" : "⏭️"
+      return `- @${v.domain}: 构建${bIcon} 测试${tIcon}${v.issues ? ` — ${v.issues.substring(0, 100)}` : ""}`
+    })
+
+    // Phase 6: Report
     progress(`📋 生成报告...`)
     const end = Date.now()
     const duration = (end - startedAt) / 1000
     this.currentPipeline!.status = "completed"
     this.currentPipeline!.completedAt = end
 
-    const succeeded = this.currentPipeline!.dispatched.filter((d) => d.status === "completed")
-    const failed = this.currentPipeline!.dispatched.filter((d) => d.status === "failed")
 
     const perDomainLines = this.currentPipeline!.dispatched.map((d) => {
       const icon = d.status === "completed" ? "✅" : "❌"
@@ -519,16 +605,18 @@ export class HivePipeline {
       )
     }
 
+    const finalSucceeded = this.currentPipeline!.dispatched.filter((d) => d.status === "completed")
     const report = [
       `# Hive Pipeline Report`,
       ``,
       `- **需求**: ${requirement}`,
       `- **相关域**: ${relevantDomains.length} (${relevantDomains.join(", ")})`,
-      `- **成功**: ${succeeded.length}/${this.currentPipeline!.dispatched.length}`,
+      `- **成功**: ${finalSucceeded.length}/${this.currentPipeline!.dispatched.length}`,
       `- **耗时**: ${duration.toFixed(1)}s`,
       `- **创建 Sessions**: ${this.currentPipeline!.sessions.length}`,
       ``,
       negotiationLines.length > 0 ? `## 接口协商\n${negotiationLines.join("\n")}` : "",
+      verifyLines.length > 0 ? `## 验证结果\n${verifyLines.join("\n")}` : "",
       ``,
       `## 执行结果`,
       ...perDomainLines,
@@ -541,7 +629,7 @@ export class HivePipeline {
       type: "pipeline_completed",
       source: "queen",
       target: "*",
-      payload: { message: `Pipeline completed: ${succeeded.length}/${this.currentPipeline!.dispatched.length} succeeded`, data: { requirement, domains: relevantDomains } },
+      payload: { message: `Pipeline completed: ${finalSucceeded.length}/${this.currentPipeline!.dispatched.length} succeeded`, data: { requirement, domains: relevantDomains } },
     })
     this.eventBus.cleanup()
     this.runningPromise = null

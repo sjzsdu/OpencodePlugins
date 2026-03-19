@@ -38,12 +38,12 @@ describe("generateAgents", () => {
     expect(agents["queen"].name).toBe("queen")
   })
 
-  test("creates one agent per domain with all mode", () => {
+  test("creates one agent per domain with subagent mode", () => {
     const agents = generateAgents(MOCK_DOMAINS, config)
     expect(agents["frontend"]).toBeDefined()
-    expect(agents["frontend"].mode).toBe("all")
+    expect(agents["frontend"].mode).toBe("subagent")
     expect(agents["backend"]).toBeDefined()
-    expect(agents["backend"].mode).toBe("all")
+    expect(agents["backend"].mode).toBe("subagent")
   })
 
   test("total agents = queen + domains", () => {

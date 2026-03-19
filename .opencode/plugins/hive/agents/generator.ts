@@ -19,7 +19,7 @@ export function generateAgents(
     mode: "primary",
     color: "#F59E0B",
     prompt: buildQueenPrompt(domains),
-    tools: { read: true, write: true, edit: true, bash: true, grep: false, glob: false, webfetch: false, task: false, todo: false, question: true },
+    tools: { read: true, write: false, edit: false, bash: true, grep: true, glob: true, lsp: true, webfetch: false, task: false, todo: true, question: true },
   }
   if (config.queen.model) {
     queenConfig.model = config.queen.model
@@ -35,10 +35,10 @@ export function generateAgents(
     agents[domain.id] = {
       name: domain.id,
       description: `${domain.name} — ${domain.description}`,
-      mode: "all",
+      mode: "subagent",
       color: COLORS[i % COLORS.length],
       prompt: buildDomainPrompt(domain),
-      tools: { read: true, write: true, edit: true, bash: true, grep: true, glob: true, task: true, todo: true },
+      tools: { read: true, write: true, edit: true, bash: true, grep: true, glob: true, lsp: true, task: false, todo: true, question: false },
     }
   }
 

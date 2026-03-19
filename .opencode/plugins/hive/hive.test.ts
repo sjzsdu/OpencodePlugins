@@ -40,7 +40,7 @@ describe("Hive integration", () => {
     expect(agents["queen"]).toBeDefined()
     expect(agents["queen"].mode).toBe("primary")
     expect(agents["frontend"]).toBeDefined()
-    expect(agents["frontend"].mode).toBe("all")
+    expect(agents["frontend"].mode).toBe("subagent")
     expect(agents["backend"]).toBeDefined()
   })
 

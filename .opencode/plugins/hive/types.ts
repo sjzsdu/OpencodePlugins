@@ -101,7 +101,7 @@ export interface HiveConfig {
 // === Pipeline (Hive) types ===
 
 // Phases for the new automated Hive pipeline
-export type PipelinePhase = "assess" | "filter" | "negotiate" | "dispatch" | "complete"
+export type PipelinePhase = "assess" | "filter" | "negotiate" | "dispatch" | "verify" | "complete"
 
 export interface PipelineLog {
   timestamp: number
@@ -128,4 +128,15 @@ export interface PipelineState {
   sessions: PipelineSession[]
   assessments: Array<{ domain: string; relevance: string; analysis: string; workload: string }>
   dispatched: Array<{ domain: string; status: "pending" | "running" | "completed" | "failed"; sessionId?: string; response?: string }>
+  verified: Array<{ domain: string; buildPassed: boolean | null; testsPassed: boolean | null; issues: string }>
+}
+
+// Structured completion data emitted by domain workers via hive_emit task_completed
+export interface StructuredCompletion {
+  changedFiles: string[]
+  createdFiles: string[]
+  testsPassed: boolean | null  // null = not run
+  buildPassed: boolean | null
+  summary: string
+  failureType?: "transient" | "fixable" | "needs_replan" | "escalate"
 }
