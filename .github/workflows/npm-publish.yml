@@ -7,6 +7,7 @@ on:
       - 'commander-v*'
       - 'hive-v*'
       - 'superpower-v*'
+      - 'stock-v*'
 
 jobs:
   publish:
@@ -54,6 +55,10 @@ jobs:
             echo "dir=.opencode/plugins/superpower" >> $GITHUB_OUTPUT
             echo "name=superpower" >> $GITHUB_OUTPUT
             echo "version=${TAG#superpower-v}" >> $GITHUB_OUTPUT
+          elif [[ "$TAG" == stock-v* ]]; then
+            echo "dir=.opencode/plugins/stock" >> $GITHUB_OUTPUT
+            echo "name=stock" >> $GITHUB_OUTPUT
+            echo "version=${TAG#stock-v}" >> $GITHUB_OUTPUT
           else
             echo "::error::Unknown tag pattern: $TAG"
             exit 1
