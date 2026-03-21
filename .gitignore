@@ -3,4 +3,5 @@ node_modules
 .opencode/plugins/emperor/data/
 .worktrees/
 .hive/
+dist
 .opencode/plugins/hive/data/

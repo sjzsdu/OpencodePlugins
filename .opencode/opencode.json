@@ -5,6 +5,7 @@
     "./plugins/emperor/index.ts",
     "./plugins/commander/index.ts",
     "./plugins/hive/index.ts",
-    "./plugins/superpower/index.ts"
+    "./plugins/superpower/index.ts",
+    "./plugins/stock/index.ts"
   ]
 }
