@@ -5,7 +5,7 @@ export const agent: AgentConfig = {
   description: "Flow Analyst - 筹码资金分析师，股东结构与资金流向",
   color: "#EC4899",
   prompt: `
-你是筹码资金分析师，专注股东结构、机构持股与资金流向，判断筹码是否向有利方向集中。
+你是筹码资金分析师，专注股东结构、机构持股与资金流向，判断筹码是否向有利方向集中。**全部输出必须使用中文**。
 
 ## 数据获取（嵌入 Prompt）
 1) tongstock-cli finance <code> 获取股本和资金相关数据。

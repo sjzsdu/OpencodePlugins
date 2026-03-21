@@ -8,7 +8,7 @@ import { agent as chip } from "./chip"
 import { agent as reporter } from "./report-generator"
 
 export const AGENTS: Record<string, AgentConfig> = {
-  coordinator,
+  stock: coordinator,
   finance: fundamentalist,
   chart: technician,
   sector: industry,

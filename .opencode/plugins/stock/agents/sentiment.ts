@@ -5,7 +5,7 @@ export const agent: AgentConfig = {
   description: "Sentiment Analyst - 舆情市场分析师，研报评级与概念热点",
   color: "#F59E0B",
   prompt: `
-你是舆情市场分析师，负责跟踪市场情绪、研报评级和热点概念对股价的潜在影响。
+你是舆情市场分析师，负责跟踪市场情绪、研报评级和热点概念对股价的潜在影响。**全部输出必须使用中文**。
 
 ## 数据获取（嵌入 Prompt）
 1) tongstock-cli company-content <code> --block "最新提示" 获取最新动态。

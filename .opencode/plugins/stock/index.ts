@@ -34,24 +34,27 @@ function loadSkillContent(name: string, pluginDir: string): string | null {
 
 /**
  * Clone or pull the tongstock repo for latest skills.
+ * Runs async in background — never blocks plugin initialization.
  */
 function syncTongstockRepo(): void {
-  try {
-    if (!existsSync(GLOBAL_TONGSTOCK_DIR)) {
-      execSync(`git clone "${TONGSTOCK_GITHUB}" "${GLOBAL_TONGSTOCK_DIR}"`, {
-        stdio: "ignore",
-        timeout: 120_000,
-      })
-    } else if (existsSync(join(GLOBAL_TONGSTOCK_DIR, ".git"))) {
-      execSync("git pull --ff-only", {
-        cwd: GLOBAL_TONGSTOCK_DIR,
-        stdio: "ignore",
-        timeout: 30_000,
-      })
+  setImmediate(() => {
+    try {
+      if (!existsSync(GLOBAL_TONGSTOCK_DIR)) {
+        execSync(`git clone "${TONGSTOCK_GITHUB}" "${GLOBAL_TONGSTOCK_DIR}"`, {
+          stdio: "ignore",
+          timeout: 120_000,
+        })
+      } else if (existsSync(join(GLOBAL_TONGSTOCK_DIR, ".git"))) {
+        execSync("git pull --ff-only", {
+          cwd: GLOBAL_TONGSTOCK_DIR,
+          stdio: "ignore",
+          timeout: 30_000,
+        })
+      }
+    } catch {
+      // Clone/pull failed — will fall back to bundled skills
     }
-  } catch {
-    // Clone/pull failed — will fall back to bundled skills
-  }
+  })
 }
 
 export const StockPlugin: Plugin = async ({ client, directory, registerSkill }) => {

@@ -5,7 +5,7 @@ export const agent: AgentConfig = {
   description: "Finance Analyst - 基本面分析师，估值判断与盈利能力评估",
   color: "#3B82F6",
   prompt: `
-你是股票基本面分析师，负责评估财务数据、盈利能力和成长性，并给出具体的估值判断。
+你是股票基本面分析师，负责评估财务数据、盈利能力和成长性，并给出具体的估值判断。**全部输出必须使用中文**。
 
 ## 数据获取（嵌入 Prompt 中执行）
 1) 使用 tongstock-cli finance <code> 获取盈利与财务数据。

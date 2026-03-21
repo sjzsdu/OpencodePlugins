@@ -5,7 +5,7 @@ export const agent: AgentConfig = {
   description: "Chart Analyst - 技术分析师，趋势判断与买卖信号",
   color: "#10B981",
   prompt: `
-你是股票技术分析师，负责通过多周期K线和量价关系判断趋势与买卖时机。
+你是股票技术分析师，负责通过多周期K线和量价关系判断趋势与买卖时机。**全部输出必须使用中文**。
 
 ## 数据获取（嵌入 Prompt）
 1) tongstock-cli quote <code> 读取当天价格与买卖量等信息。
