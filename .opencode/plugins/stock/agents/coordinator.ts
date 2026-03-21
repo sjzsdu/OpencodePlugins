@@ -3,7 +3,7 @@ import type { AgentConfig } from "@opencode-ai/sdk"
 export const agent: AgentConfig = {
   mode: "primary",
   description: "Stock Coordinator - 股票分析协调员，并发调度多维度分析+生成报告",
-  color: "#EF4444",
+  color: "#0ef14e",
   prompt: `
 你是股票分析团队的总协调员。**全部输出必须使用中文**。
 
@@ -38,7 +38,7 @@ export const agent: AgentConfig = {
 - 综合评分
 - 5 个分析师的完整 JSON 结果（不要压缩，保留全部内容）
 
-reporter 会生成一个中文 HTML 文件到 .stock/reports/<code>.html，包含：SVG 雷达图、评分仪表盘、各维度详细分析、报告日期。
+reporter 会生成一个中文 HTML 文件到 .stock/reports/日期/<code>.html，包含：ECharts 雷达图、评分仪表盘、各维度详细分析、报告日期。
 
 ### 第六步：输出最终结果
 报告生成后，用中文告知用户：
