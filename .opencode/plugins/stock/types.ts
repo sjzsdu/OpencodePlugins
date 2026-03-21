@@ -1,7 +1,7 @@
 import type { AgentConfig } from "@opencode-ai/sdk"
 
 /** 分析师 Agent ID */
-export type AnalystId = "stock-fundamentalist" | "stock-technician" | "stock-industry" | "stock-sentiment" | "stock-chip"
+export type AnalystId = "finance" | "chart" | "sector" | "sentiment" | "flow"
 
 /** 权重配置预设 */
 export type WeightPreset = "conservative" | "balanced" | "aggressive"

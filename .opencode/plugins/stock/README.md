@@ -1,34 +1,37 @@
 # Stock — Multi-Agent Stock Analysis Plugin
 
-An [OpenCode](https://opencode.ai) plugin that performs multi-dimensional A-share stock analysis using parallel AI agents. Each agent specializes in one analysis dimension, scores 0-100, and a coordinator aggregates weighted results into a comprehensive report.
+An [OpenCode](https://opencode.ai) plugin that performs multi-dimensional A-share stock analysis using parallel AI agents. Each agent specializes in one analysis dimension, scores 0-100, and a coordinator aggregates weighted results into a comprehensive HTML report.
 
 ## Architecture
 
 ```
-User: @stock-coordinator 分析 000001
+User: @coordinator 分析 000001
                 ↓
          Coordinator (验证股票 + 并发调度)
                 ↓ task() × 5 (parallel)
   ┌─────────┬──────────┬──────────┬──────────┐
   ↓         ↓          ↓          ↓          ↓
-基本面     技术面     行业主营    舆情市场    筹码资金
+ finance   chart    sector    sentiment    flow
  30%       25%        15%        15%        15%
   ↓         ↓          ↓          ↓          ↓
   └─────────┴──────────┴──────────┴──────────┘
                 ↓
-       加权评分 + 综合报告
+         Reporter (生成 HTML 报告)
+                ↓
+     .stock/reports/<code>.html + 可选 PDF
 ```
 
 ## Agents
 
-| Agent | Role | Weight | Data Source |
-|-------|------|--------|-------------|
-| **stock-coordinator** | Orchestrator (primary) | — | `quote` (验证) |
-| **stock-fundamentalist** | Fundamentals | 30% | `finance`, `xdxr`, F10 财务分析 |
-| **stock-technician** | Technical analysis | 25% | `kline` (day/week/60m), `quote` |
-| **stock-industry** | Industry & business | 15% | F10 公司概况/经营分析/行业分析, `block` |
-| **stock-sentiment** | Sentiment & news | 15% | F10 最新提示/研报评级/热点题材/公告/报道 |
-| **stock-chip** | Capital flow & chips | 15% | `finance`, `quote`, F10 股东研究/机构持股/资金动向 |
+| Agent | Role | Weight | Key Output |
+|-------|------|--------|------------|
+| **coordinator** | Orchestrator (primary) | — | 验证 + 调度 + 聚合 |
+| **finance** | Fundamentals + valuation | 30% | PE/PB 估值判断, 合理价格区间, 股息率 |
+| **chart** | Technical analysis | 25% | 趋势方向, 支撑/阻力位, 买卖信号 |
+| **sector** | Industry & business | 15% | 行业地位, 竞争格局, 前景 |
+| **sentiment** | Sentiment & news | 15% | 研报评级, 概念热点, 媒体情绪 |
+| **flow** | Capital flow & chips | 15% | 股东集中度, 机构持仓, 资金流向 |
+| **reporter** | HTML report generator | — | SVG 雷达图, 人性化解读, 投资建议 |
 
 ## Data Source
 
@@ -61,26 +64,20 @@ In `.opencode/opencode.json`:
 ### 3. Use
 
 ```
-@stock-coordinator 分析 000001
-@stock-coordinator 分析 600519 贵州茅台
+@coordinator 分析 000001
+@coordinator 分析 600519 贵州茅台
 ```
 
-## Output Example
+## Report Output
 
-```markdown
-# 📊 平安银行 (000001) 综合分析报告
+The plugin generates professional HTML reports at `.stock/reports/<code>.html` containing:
 
-## 综合评分: 72/100 ⭐⭐⭐⭐
-
-| 维度 | 得分 | 权重 | 加权分 | 置信度 |
-|------|------|------|--------|--------|
-| 基本面 | 78 | 30% | 23.4 | 0.85 |
-| 技术面 | 65 | 25% | 16.3 | 0.80 |
-| 行业主营 | 72 | 15% | 10.8 | 0.75 |
-| 舆情市场 | 70 | 15% | 10.5 | 0.70 |
-| 筹码资金 | 68 | 15% | 10.2 | 0.80 |
-| **合计** | — | 100% | **71.2** | — |
-```
+- **Score gauge** — CSS conic-gradient circular score display
+- **Radar chart** — SVG 5-dimension visualization
+- **Dimension cards** — Each with progress bar + narrative interpretation
+- **Bullish/Bearish** — Side-by-side color-coded sections
+- **Investment advice** — Tailored for conservative/balanced/aggressive investors
+- **PDF export** — `agent-browser open file://path && agent-browser pdf output.pdf`
 
 ## Configuration
 
@@ -90,16 +87,17 @@ Create `.opencode/stock.json` (optional — all settings have defaults):
 {
   "weights": "balanced",
   "agents": {
-    "stock-coordinator": { "model": "anthropic/claude-sonnet-4-20250514" },
-    "stock-fundamentalist": { "model": "anthropic/claude-sonnet-4-20250514" }
+    "coordinator": { "model": "anthropic/claude-sonnet-4-20250514" },
+    "finance": { "model": "anthropic/claude-sonnet-4-20250514" },
+    "chart": { "model": "anthropic/claude-sonnet-4-20250514" }
   }
 }
 ```
 
 ### Weight Presets
 
-| Preset | Fundamentals | Technical | Industry | Sentiment | Chips |
-|--------|-------------|-----------|----------|-----------|-------|
+| Preset | Finance | Chart | Sector | Sentiment | Flow |
+|--------|---------|-------|--------|-----------|------|
 | **conservative** | 35% | 15% | 15% | 15% | 20% |
 | **balanced** (default) | 30% | 25% | 15% | 15% | 15% |
 | **aggressive** | 25% | 35% | 15% | 15% | 10% |
@@ -109,11 +107,11 @@ Custom weights:
 ```json
 {
   "weights": {
-    "stock-fundamentalist": 0.40,
-    "stock-technician": 0.20,
-    "stock-industry": 0.15,
-    "stock-sentiment": 0.10,
-    "stock-chip": 0.15
+    "finance": 0.40,
+    "chart": 0.20,
+    "sector": 0.15,
+    "sentiment": 0.10,
+    "flow": 0.15
   }
 }
 ```
@@ -128,21 +126,40 @@ Skill loading priority:
 2. plugins/stock/skills/<name>.md       (bundled fallback)
 ```
 
-If both fail (no network + no bundled file), the plugin logs an error but continues — agents can still function using their embedded CLI commands.
-
 ## Scoring System
 
-Each sub-agent returns a structured JSON score:
+Each sub-agent returns a structured JSON score with extended fields:
 
+### finance agent output
 ```json
 {
-  "agent": "stock-fundamentalist",
+  "agent": "finance",
   "score": 78,
   "confidence": 0.85,
-  "summary": "ROE 12.5%，连续3年分红，但资产负债率偏高",
-  "bullish": ["净利润稳定增长", "分红历史良好"],
-  "bearish": ["负债率偏高", "PE 高于行业均值"],
-  "reasoning": "..."
+  "reasoning": "从财务数据来看，该公司净资产收益率持续维持在12%以上...",
+  "valuation": {
+    "pe_assessment": "合理",
+    "fair_price_range": "25-30 元",
+    "dividend_yield": "3.2%",
+    "risk_alerts": ["负债率偏高"]
+  }
+}
+```
+
+### chart agent output
+```json
+{
+  "agent": "chart",
+  "score": 65,
+  "confidence": 0.80,
+  "reasoning": "从日线图来看，该股近期呈现出明确的上升趋势...",
+  "technicals": {
+    "trend": "上升趋势",
+    "support": "12.5",
+    "resistance": "14.8",
+    "signal": "买入",
+    "multi_timeframe": "日线周线同向多头"
+  }
 }
 ```
 
@@ -166,11 +183,12 @@ Score ranges:
 ├── agents/
 │   ├── index.ts          # AGENTS export map
 │   ├── coordinator.ts    # 📊 Orchestrator (primary)
-│   ├── fundamentalist.ts # 💰 Fundamentals (30%)
-│   ├── technician.ts     # 📈 Technical (25%)
-│   ├── industry.ts       # 🏭 Industry (15%)
-│   ├── sentiment.ts      # 📰 Sentiment (15%)
-│   └── chip.ts           # 🎯 Capital flow (15%)
+│   ├── fundamentalist.ts # 💰 Finance + valuation (30%)
+│   ├── technician.ts     # 📈 Chart + signals (25%)
+│   ├── industry.ts       # 🏭 Sector + business (15%)
+│   ├── sentiment.ts      # 📰 Sentiment + news (15%)
+│   ├── chip.ts           # 🎯 Capital flow (15%)
+│   └── report-generator.ts # 📄 HTML report with visualization
 ├── skills/               # Bundled fallback skills
 │   ├── tongstock-cli.md
 │   └── tongstock-workflow.md
@@ -183,6 +201,7 @@ Score ranges:
 - **Language**: TypeScript (strict mode)
 - **Plugin SDK**: sjz-opencode-sdk
 - **Data**: tongstock-cli (TDX protocol, A-share only)
+- **PDF export**: agent-browser (Playwright-based)
 
 ## License
 

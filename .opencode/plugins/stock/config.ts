@@ -7,25 +7,25 @@ import { AGENTS } from "./agents"
 /** 预设权重方案 */
 const WEIGHT_PRESETS: Record<WeightPreset, WeightConfig> = {
   conservative: {
-    "stock-fundamentalist": 0.35,
-    "stock-technician": 0.15,
-    "stock-industry": 0.15,
-    "stock-sentiment": 0.15,
-    "stock-chip": 0.20,
+    finance: 0.35,
+    chart: 0.15,
+    sector: 0.15,
+    sentiment: 0.15,
+    flow: 0.20,
   },
   balanced: {
-    "stock-fundamentalist": 0.30,
-    "stock-technician": 0.25,
-    "stock-industry": 0.15,
-    "stock-sentiment": 0.15,
-    "stock-chip": 0.15,
+    finance: 0.30,
+    chart: 0.25,
+    sector: 0.15,
+    sentiment: 0.15,
+    flow: 0.15,
   },
   aggressive: {
-    "stock-fundamentalist": 0.25,
-    "stock-technician": 0.35,
-    "stock-industry": 0.15,
-    "stock-sentiment": 0.15,
-    "stock-chip": 0.10,
+    finance: 0.25,
+    chart: 0.35,
+    sector: 0.15,
+    sentiment: 0.15,
+    flow: 0.10,
   },
 }
 
