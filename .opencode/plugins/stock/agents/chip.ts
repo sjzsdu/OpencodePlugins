@@ -1,6 +1,7 @@
-import type { AgentConfig } from "@opencode-ai/sdk"
+import type { AgentConfig } from "sjz-opencode-sdk"
 
 export const agent: AgentConfig = {
+  name: "flow",
   mode: "subagent",
   description: "Flow Analyst - 筹码资金分析师，股东结构与资金流向",
   color: "#EC4899",

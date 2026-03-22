@@ -1,6 +1,7 @@
-import type { AgentConfig } from "@opencode-ai/sdk"
+import type { AgentConfig } from "sjz-opencode-sdk"
 
 export const agent: AgentConfig = {
+  name: "finance",
   mode: "subagent",
   description: "Finance Analyst - 基本面分析师，估值判断与盈利能力评估",
   color: "#3B82F6",

@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
-import type { AgentConfig } from "@opencode-ai/sdk"
+import type { AgentConfig } from "sjz-opencode-sdk"
 import type { AnalystConfig, AnalystUserConfig, WeightConfig, WeightPreset } from "./types"
 import { AGENTS } from "./agents"
 

@@ -1,4 +1,4 @@
-import type { AgentConfig } from "@opencode-ai/sdk"
+import type { AgentConfig } from "sjz-opencode-sdk"
 import { agent as coordinator } from "./coordinator"
 import { agent as fundamentalist } from "./fundamentalist"
 import { agent as technician } from "./technician"

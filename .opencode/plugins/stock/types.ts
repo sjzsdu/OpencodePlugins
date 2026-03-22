@@ -1,4 +1,4 @@
-import type { AgentConfig } from "@opencode-ai/sdk"
+import type { AgentConfig } from "sjz-opencode-sdk"
 
 /** 分析师 Agent ID */
 export type AnalystId = "finance" | "chart" | "sector" | "sentiment" | "flow"

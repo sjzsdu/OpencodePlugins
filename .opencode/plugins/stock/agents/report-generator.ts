@@ -1,6 +1,7 @@
-import type { AgentConfig } from "@opencode-ai/sdk"
+import type { AgentConfig } from "sjz-opencode-sdk"
 
 export const agent: AgentConfig = {
+  name: "reporter",
   mode: "subagent",
   description: "Reporter - 生成专业中文HTML投资分析报告（ECharts雷达图+人性化解读）",
   color: "#0EA5E9",

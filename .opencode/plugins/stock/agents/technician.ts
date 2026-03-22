@@ -1,6 +1,7 @@
-import type { AgentConfig } from "@opencode-ai/sdk"
+import type { AgentConfig } from "sjz-opencode-sdk"
 
 export const agent: AgentConfig = {
+  name: "chart",
   mode: "subagent",
   description: "Chart Analyst - 技术分析师，趋势判断与买卖信号",
   color: "#10B981",

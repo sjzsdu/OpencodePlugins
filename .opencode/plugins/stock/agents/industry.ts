@@ -1,6 +1,7 @@
-import type { AgentConfig } from "@opencode-ai/sdk"
+import type { AgentConfig } from "sjz-opencode-sdk"
 
 export const agent: AgentConfig = {
+  name: "sector",
   mode: "subagent",
   description: "Sector Analyst - 行业主营分析师，评估行业地位与竞争格局",
   color: "#8B5CF6",

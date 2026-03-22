@@ -1,6 +1,7 @@
-import type { AgentConfig } from "@opencode-ai/sdk"
+import type { AgentConfig } from "sjz-opencode-sdk"
 
 export const agent: AgentConfig = {
+  name: "sentiment",
   mode: "subagent",
   description: "Sentiment Analyst - 舆情市场分析师，研报评级与概念热点",
   color: "#F59E0B",
