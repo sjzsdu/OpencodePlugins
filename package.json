@@ -1,5 +1,5 @@
 {
-  "name": "emperor-monorepo",
+  "name": "opencode-plugins-monorepo",
   "private": true,
   "type": "module",
   "devDependencies": {
