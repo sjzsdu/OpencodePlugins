@@ -6,7 +6,7 @@
 
 **Architecture:** Plugin startup scans project → discovers logical domains → dynamically creates per-domain Agents + Queen coordinator → EventBus enables agent-to-agent communication via system prompt injection (receive) and tool calls (publish) → agents execute code changes in parallel with full autonomy.
 
-**Tech Stack:** TypeScript (strict), Bun runtime, @opencode-ai/plugin SDK, @opencode-ai/sdk, JSON file persistence, zod for schema validation.
+**Tech Stack:** TypeScript (strict), Bun runtime, @opencode-ai/plugin SDK, sjz-opencode-sdk, JSON file persistence, zod for schema validation.
 
 **Reference patterns:** Follow `.opencode/plugins/commander/` conventions exactly — `tool()` factory, `JsonStore` pattern, `client.session.create/prompt` for agent invocation, `client.tui.showToast` for progress.
 
@@ -24,7 +24,7 @@
 
 ```typescript
 // .opencode/plugins/hive/types.ts
-import type { AgentConfig } from "@opencode-ai/sdk"
+import type { AgentConfig } from "sjz-opencode-sdk"
 
 // === Domain ===
 
@@ -536,7 +536,7 @@ feat(hive): add static scanner and discovery cache
 
 ```typescript
 // .opencode/plugins/hive/discovery/analyzer.ts
-import type { OpencodeClient } from "@opencode-ai/sdk"
+import type { OpencodeClient } from "sjz-opencode-sdk"
 import type { Domain } from "../types"
 
 // Takes static scan results + reads key files → asks LLM to produce Domain[]
@@ -610,7 +610,7 @@ export function mergeDomains(
 
 ```typescript
 // .opencode/plugins/hive/discovery/index.ts
-import type { OpencodeClient } from "@opencode-ai/sdk"
+import type { OpencodeClient } from "sjz-opencode-sdk"
 import type { Domain, HiveConfig } from "../types"
 import { scanProject } from "./scanner"
 import { DiscoveryCache } from "./cache"
@@ -739,7 +739,7 @@ export function buildDependencyGraph(domains: Domain[]): string {
 
 ```typescript
 // .opencode/plugins/hive/agents/generator.ts
-import type { AgentConfig } from "@opencode-ai/sdk"
+import type { AgentConfig } from "sjz-opencode-sdk"
 import type { Domain, HiveConfig } from "../types"
 import { buildDomainPrompt, buildQueenPrompt } from "./prompts"
 
@@ -968,7 +968,7 @@ feat(hive): add broadcast, negotiate, and dispatch tools
 
 ```typescript
 // .opencode/plugins/hive/hooks/config.ts
-import type { AgentConfig } from "@opencode-ai/sdk"
+import type { AgentConfig } from "sjz-opencode-sdk"
 
 export function createConfigHook(agents: Record<string, AgentConfig>) {
   return async (openCodeConfig: any) => {

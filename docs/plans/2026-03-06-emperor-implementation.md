@@ -6,7 +6,7 @@
 
 **Architecture:** Tool-Driven orchestration. Plugin registers custom tools (`下旨`, `查看奏折`, `叫停`) and 8 OpenCode agents. When user issues a complex task, the 太子 agent calls the `下旨` tool, which internally uses the SDK to drive a pipeline: 中书省 plans → 门下省 reviews → 六部 execute in parallel → results compiled into a memorial.
 
-**Tech Stack:** TypeScript, @opencode-ai/plugin, @opencode-ai/sdk, Bun runtime, Zod (via tool.schema)
+**Tech Stack:** TypeScript, @opencode-ai/plugin, sjz-opencode-sdk, Bun runtime, Zod (via tool.schema)
 
 **Design Doc:** `docs/plans/2026-03-06-emperor-plugin-design.md`
 
@@ -32,7 +32,7 @@ Add TypeScript type checking support. The plugin runs in Bun so no build step ne
 }
 ```
 
-No change needed — `@opencode-ai/plugin` already bundles `@opencode-ai/sdk` types. The plugin files will be loaded directly by OpenCode from `.opencode/plugins/`.
+No change needed — `@opencode-ai/plugin` already bundles `sjz-opencode-sdk` types. The plugin files will be loaded directly by OpenCode from `.opencode/plugins/`.
 
 **Step 2: Create type definitions**
 

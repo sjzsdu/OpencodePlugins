@@ -15,6 +15,6 @@
     "rootDir": ".",
     "types": ["@types/bun"]
   },
-  "include": [".opencode/plugins/emperor/**/*.ts", ".opencode/plugins/commander/**/*.ts"],
+  "include": ["plugins/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

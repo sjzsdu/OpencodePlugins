@@ -6,7 +6,7 @@
 
 **Architecture:** Single "Lead" agent orchestrates everything. Code-based dispatcher handles parallel execution and fix-loop iteration. Complexity classifier determines how many agents to involve. New plugin lives alongside existing emperor plugin.
 
-**Tech Stack:** TypeScript (strict), @opencode-ai/plugin SDK, @opencode-ai/sdk, JSON file persistence
+**Tech Stack:** TypeScript (strict), @opencode-ai/plugin SDK, sjz-opencode-sdk, JSON file persistence
 
 **Design Doc:** `docs/plans/2026-03-10-commander-plugin-design.md`
 
@@ -20,7 +20,7 @@
 **Step 1: Create types.ts with all type definitions**
 
 ```typescript
-import type { AgentConfig } from "@opencode-ai/sdk"
+import type { AgentConfig } from "sjz-opencode-sdk"
 
 // --- State Machine ---
 

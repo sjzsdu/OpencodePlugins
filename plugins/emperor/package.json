@@ -1,0 +1,32 @@
+{
+  "name": "opencode-plugin-emperor",
+  "version": "0.5.0",
+  "description": "Emperor — 三省六部多智能体协作系统 OpenCode 插件",
+  "main": "index.ts",
+  "types": "index.ts",
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "files": [
+    "**/*.ts",
+    "skills/**/*"
+  ],
+  "peerDependencies": {
+    "@opencode-ai/plugin": ">=1.2.0"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "三省六部",
+    "multi-agent",
+    "agent-orchestration"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sjzsdu/emperor.git",
+    "directory": "plugins/emperor"
+  },
+  "author": "sunjuzhong",
+  "license": "MIT"
+}

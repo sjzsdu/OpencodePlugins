@@ -1,0 +1,32 @@
+{
+  "name": "opencode-plugin-hive",
+  "version": "0.1.0",
+  "description": "Hive — Dynamic domain-agent coordination plugin for OpenCode",
+  "main": "index.ts",
+  "types": "index.ts",
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "files": [
+    "**/*.ts"
+  ],
+  "peerDependencies": {
+    "@opencode-ai/plugin": ">=1.2.0"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "hive",
+    "multi-agent",
+    "domain-discovery",
+    "agent-coordination"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sjzsdu/OpencodePlugins.git",
+    "directory": "plugins/hive"
+  },
+  "author": "sunjuzhong",
+  "license": "MIT"
+}

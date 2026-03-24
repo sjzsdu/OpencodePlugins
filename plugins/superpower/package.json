@@ -1,0 +1,29 @@
+{
+  "name": "opencode-plugin-superpower",
+  "version": "0.1.0",
+  "description": "Superpower plugin for OpenCode",
+  "main": "index.ts",
+  "types": "index.ts",
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "files": [
+    "**/*.ts"
+  ],
+  "peerDependencies": {
+    "@opencode-ai/plugin": ">=1.2.0"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "superpower"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sjzsdu/emperor.git",
+    "directory": "plugins/superpower"
+  },
+  "author": "sunjuzhong",
+  "license": "MIT"
+}
