@@ -6,10 +6,12 @@ A collection of [OpenCode](https://opencode.ai) plugins that enable multiple AI 
 
 | Plugin | Agents | Approach | Best For | Docs |
 |--------|--------|----------|----------|------|
-| [**Commander**](.opencode/plugins/commander/) | 4 | Single orchestrator, fast iteration, Coder↔Tester fix loops | Most development tasks | [README](.opencode/plugins/commander/README.md) |
-| [**Emperor**](.opencode/plugins/emperor/) | 11 | Three Departments & Six Ministries (三省六部), governance with checks & balances | Tasks requiring rigorous multi-stage review | [README](.opencode/plugins/emperor/README.md) |
-| [**Hive**](.opencode/plugins/hive/) | Dynamic | Domain auto-discovery, EventBus coordination, autonomous execution | Large multi-domain projects | [README](.opencode/plugins/hive/README.md) |
-| [**Superpower**](.opencode/plugins/superpower/) | Dynamic | Loads agents, skills, and commands from superpowers repo | Extensible agent capabilities | [README](.opencode/plugins/superpower/README.md) |
+| [**Commander**](plugins/commander/) | 4 | Single orchestrator, fast iteration, Coder↔Tester fix loops | Most development tasks | [README](plugins/commander/README.md) |
+| [**Emperor**](plugins/emperor/) | 11 | Three Departments & Six Ministries (三省六部), governance with checks & balances | Tasks requiring rigorous multi-stage review | [README](plugins/emperor/README.md) |
+| [**Hive**](plugins/hive/) | Dynamic | Domain auto-discovery, EventBus coordination, autonomous execution | Large multi-domain projects | [README](plugins/hive/README.md) |
+| [**Superpower**](plugins/superpower/) | Dynamic | Loads agents, skills, and commands from superpowers repo | Extensible agent capabilities | [README](plugins/superpower/README.md) |
+| [**Stock**](plugins/stock/) | 5 | Multi-dimensional A-share analysis (fundamental, technical, sentiment, flow, sector) | Chinese A-share stock analysis | [README](plugins/stock/README.md) |
+| [**Triage**](plugins/triage/) | 6 | Jira ticket triage (Bug/Feature), code investigation, solution design | Bug triage and feature specification | - |
 
 ### Commander — Adaptive 4-Agent Team
 
@@ -44,6 +46,26 @@ Startup → Scan project → Discover domains → Create per-domain Agents + Que
 - **Queen Coordinator**: Broadcasts requirements, negotiates interfaces, dispatches parallel tasks
 - **Autonomous Execution**: Domain agents can self-adapt to breaking changes from dependencies
 
+### Stock — Multi-Dimensional A-Share Analysis
+
+```
+Query → Fundamentalist (基本面) + Technician (技术面) + Sentiment (情绪) + Flow (资金流) + Industry (行业) → HTML Report
+```
+
+- **5 并发 Agent**: 基本面、技术面、情绪面、资金流、行业分析
+- **智能评分**: 预设权重（保守/平衡/激进），自定义权重
+- **HTML 报告生成**: 可视化分析结果
+
+### Triage — Jira Ticket Analysis & Implementation
+
+```
+Jira Ticket → Triage (分类) → Scout (探索) → [Detective (Bug调查) | Architect (Feature方案)] → [Auto-fix | Awaiting Confirm]
+```
+
+- **Bug 路径**: Scout 探索 → Detective 根因调查 → 自动修复
+- **Feature 路径**: Scout 探索 → Architect 方案设计 → 等待确认后实现
+- **6 Agent 协作**: triage, scout, detective, architect, coder, tester
+
 ### Superpower — Extensible Agent Capabilities
 
 ```
@@ -68,7 +90,9 @@ In `.opencode/opencode.json`:
     "./plugins/commander/index.ts",
     "./plugins/emperor/index.ts",
     "./plugins/hive/index.ts",
-    "./plugins/superpower/index.ts"
+    "./plugins/superpower/index.ts",
+    "./plugins/stock/index.ts",
+    "./plugins/triage/index.ts"
   ]
 }
 ```
@@ -105,46 +129,52 @@ The Superpower plugin loads agents from the [superpowers](https://github.com/obr
 
 ### 3. Configure (optional)
 
-- Commander: `.opencode/commander.json` — [config docs](.opencode/plugins/commander/README.md#configuration)
-- Emperor: `.opencode/emperor.json` — [config docs](.opencode/plugins/emperor/README.md#configuration)
+- Commander: `.opencode/commander.json` — [config docs](plugins/commander/README.md#configuration)
+- Emperor: `.opencode/emperor.json` — [config docs](plugins/emperor/README.md#configuration)
 - Hive: `.opencode/hive.json` — [design docs](docs/plans/2026-03-11-hive-plugin-design.md)
 - Superpower: No config needed (loads from `~/.superpowers/`)
+- Stock: `.opencode/stock.json` — [config docs](plugins/stock/README.md#配置)
+- Triage: `.opencode/triage.json` — [config docs](plugins/triage/config.ts)
 
 ## Project Structure
 
 ```
 .
-├── .opencode/
-│   ├── opencode.json                    # Plugin registration
-│   ├── package.json                     # Plugin SDK dependency
-│   ├── commander.json                   # Commander config (optional)
-│   ├── emperor.json                     # Emperor config (optional)
-│   └── plugins/
-│       ├── commander/                   # Commander plugin
-│       │   ├── index.ts                 # Entry point
-│       │   ├── agents/                  # 4 agent definitions
-│       │   ├── engine/                  # Pipeline, classifier, dispatcher
-│       │   └── tools/                   # cmd_task, cmd_status, cmd_halt
-│       └── emperor/                     # Emperor plugin
-│           ├── index.ts                 # Entry point
-│           ├── agents/                  # 11 agent definitions
-│           ├── engine/                  # Pipeline, recon, reviewer, dispatcher
-│           ├── tools/                   # edict, memorial, halt
-│           └── skills/                  # Built-in skills
-│       └── hive/                       # Hive plugin
-│           ├── index.ts                 # Entry point
-│           ├── discovery/               # Domain auto-discovery
-│           ├── agents/                  # Dynamic agent generator
-│           ├── eventbus/                # Event pub/sub system
-│           ├── tools/                   # hive_emit, hive_status, hive_broadcast, etc.
-│           └── hooks/                   # config, system-transform, file-watcher, autonomy
-│       └── superpower/                  # Superpower plugin
-│           └── index.ts                 # Entry point (loads agents/skills/commands from ~/.superpowers/)
+├── plugins/                              # Plugin directory
+│   ├── commander/                       # Commander plugin
+│   │   ├── index.ts                     # Entry point
+│   │   ├── agents/                      # 4 agent definitions
+│   │   ├── engine/                      # Pipeline, classifier, dispatcher
+│   │   └── tools/                       # cmd_task, cmd_status, cmd_halt
+│   ├── emperor/                         # Emperor plugin
+│   │   ├── index.ts                     # Entry point
+│   │   ├── agents/                      # 11 agent definitions
+│   │   ├── engine/                      # Pipeline, recon, reviewer, dispatcher
+│   │   ├── tools/                       # edict, memorial, halt
+│   │   └── skills/                      # Built-in skills
+│   ├── hive/                            # Hive plugin
+│   │   ├── index.ts                     # Entry point
+│   │   ├── discovery/                   # Domain auto-discovery
+│   │   ├── agents/                      # Dynamic agent generator
+│   │   ├── eventbus/                    # Event pub/sub system
+│   │   ├── tools/                       # hive_emit, hive_status, hive_broadcast, etc.
+│   │   └── hooks/                       # config, system-transform, file-watcher, autonomy
+│   ├── superpower/                      # Superpower plugin
+│   │   └── index.ts                     # Entry point (loads agents/skills/commands from ~/.superpowers/)
+│   ├── stock/                            # Stock plugin
+│   │   ├── index.ts                     # Entry point
+│   │   ├── agents/                      # 5 agent definitions
+│   │   └── skills/                      # Built-in skills
+│   └── triage/                          # Triage plugin
+│       ├── index.ts                     # Entry point
+│       ├── agents/                      # 6 agent definitions
+│       ├── engine/                      # Pipeline, classifier, dispatcher
+│       └── tools/                       # jira_analyze, jira_implement, jira_status
 ├── package.json                         # Build tooling (private)
 ├── tsconfig.json                        # TypeScript config
 ├── .hive/                               # Hive runtime data (events.json, domains.json)
 └── .github/workflows/
-    ├── ci.yml                           # Type check + tests (triggers on .hive/, .opencode/plugins/**, tsconfig.json, package.json)
+    ├── ci.yml                           # Type check + tests
     └── npm-publish.yml                  # Tag-based selective publish
 ```
 
@@ -152,7 +182,7 @@ The Superpower plugin loads agents from the [superpowers](https://github.com/obr
 
 ```bash
 # Install dependencies
-bun install && bun install --cwd .opencode
+bun install
 
 # Type check
 bun run build
@@ -177,6 +207,12 @@ git tag hive-v0.1.0 && git push --tags
 
 # Superpower
 git tag superpower-v0.1.0 && git push --tags
+
+# Stock
+git tag stock-v0.1.0 && git push --tags
+
+# Triage
+git tag triage-v0.1.0 && git push --tags
 ```
 
 | Package | npm |
@@ -185,6 +221,8 @@ git tag superpower-v0.1.0 && git push --tags
 | `opencode-plugin-emperor` | Emperor plugin |
 | `opencode-plugin-hive` | Hive plugin |
 | `opencode-plugin-superpower` | Superpower plugin |
+| `opencode-plugin-stock` | Stock plugin |
+| `opencode-plugin-triage` | Triage plugin |
 
 ## Tech Stack
 

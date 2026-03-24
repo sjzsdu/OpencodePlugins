@@ -5,14 +5,14 @@ on:
     branches: [main]
     paths:
       - '.hive/**'
-      - '.opencode/plugins/**'
+      - 'plugins/**'
       - 'tsconfig.json'
       - 'package.json'
   pull_request:
     branches: [main]
     paths:
       - '.hive/**'
-      - '.opencode/plugins/**'
+      - 'plugins/**'
       - 'tsconfig.json'
       - 'package.json'
 
@@ -31,10 +31,6 @@ jobs:
       - name: Install root dependencies
         run: bun install
 
-      - name: Install plugin SDK dependencies
-        run: bun install
-        working-directory: .opencode
-
       - name: Type check
         run: bun run build
 
@@ -52,10 +48,6 @@ jobs:
 
       - name: Install root dependencies
         run: bun install
-
-      - name: Install plugin SDK dependencies
-        run: bun install
-        working-directory: .opencode
 
       - name: Run tests (skip if no test files)
         run: |

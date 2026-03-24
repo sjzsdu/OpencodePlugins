@@ -8,6 +8,7 @@ on:
       - 'hive-v*'
       - 'superpower-v*'
       - 'stock-v*'
+      - 'triage-v*'
 
 jobs:
   publish:
@@ -28,10 +29,6 @@ jobs:
       - name: Install root dependencies
         run: bun install
 
-      - name: Install plugin SDK dependencies
-        run: bun install
-        working-directory: .opencode
-
       - name: Type check
         run: bun run build
 
@@ -40,25 +37,29 @@ jobs:
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
           if [[ "$TAG" == emperor-v* ]]; then
-            echo "dir=.opencode/plugins/emperor" >> $GITHUB_OUTPUT
+            echo "dir=plugins/emperor" >> $GITHUB_OUTPUT
             echo "name=emperor" >> $GITHUB_OUTPUT
             echo "version=${TAG#emperor-v}" >> $GITHUB_OUTPUT
           elif [[ "$TAG" == commander-v* ]]; then
-            echo "dir=.opencode/plugins/commander" >> $GITHUB_OUTPUT
+            echo "dir=plugins/commander" >> $GITHUB_OUTPUT
             echo "name=commander" >> $GITHUB_OUTPUT
             echo "version=${TAG#commander-v}" >> $GITHUB_OUTPUT
           elif [[ "$TAG" == hive-v* ]]; then
-            echo "dir=.opencode/plugins/hive" >> $GITHUB_OUTPUT
+            echo "dir=plugins/hive" >> $GITHUB_OUTPUT
             echo "name=hive" >> $GITHUB_OUTPUT
             echo "version=${TAG#hive-v}" >> $GITHUB_OUTPUT
           elif [[ "$TAG" == superpower-v* ]]; then
-            echo "dir=.opencode/plugins/superpower" >> $GITHUB_OUTPUT
+            echo "dir=plugins/superpower" >> $GITHUB_OUTPUT
             echo "name=superpower" >> $GITHUB_OUTPUT
             echo "version=${TAG#superpower-v}" >> $GITHUB_OUTPUT
           elif [[ "$TAG" == stock-v* ]]; then
-            echo "dir=.opencode/plugins/stock" >> $GITHUB_OUTPUT
+            echo "dir=plugins/stock" >> $GITHUB_OUTPUT
             echo "name=stock" >> $GITHUB_OUTPUT
             echo "version=${TAG#stock-v}" >> $GITHUB_OUTPUT
+          elif [[ "$TAG" == triage-v* ]]; then
+            echo "dir=plugins/triage" >> $GITHUB_OUTPUT
+            echo "name=triage" >> $GITHUB_OUTPUT
+            echo "version=${TAG#triage-v}" >> $GITHUB_OUTPUT
           else
             echo "::error::Unknown tag pattern: $TAG"
             exit 1
