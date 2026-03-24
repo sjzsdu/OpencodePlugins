@@ -1,11 +1,12 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "plugin": [
-    "oh-my-opencode@latest",
-    "./plugins/emperor/index.ts",
-    "./plugins/commander/index.ts",
-    "./plugins/hive/index.ts",
-    "./plugins/superpower/index.ts",
-    "./plugins/stock/index.ts"
+    // "oh-my-opencode@latest",
+    // "../plugins/emperor/index.ts",
+    // "../plugins/commander/index.ts",
+    // "../plugins/hive/index.ts",
+    // "../plugins/superpower/index.ts",
+    // "../plugins/stock/index.ts",
+    // "../plugins/triage/index.ts"
   ]
 }
