@@ -1,0 +1,32 @@
+{
+  "name": "opencode-plugin-triage",
+  "version": "0.1.0",
+  "description": "Triage — Jira Ticket 分析与实现插件，支持 Bug 分诊和 Feature 方案设计",
+  "main": "index.ts",
+  "types": "index.ts",
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "files": [
+    "**/*.ts"
+  ],
+  "peerDependencies": {
+    "@opencode-ai/plugin": ">=1.2.0"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "triage",
+    "jira",
+    "bug-triage",
+    "feature-design"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sjzsdu/OpencodePlugins.git",
+    "directory": "plugins/triage"
+  },
+  "author": "sunjuzhong",
+  "license": "MIT"
+}

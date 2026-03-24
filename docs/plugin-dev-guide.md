@@ -65,9 +65,9 @@ export type PluginInput = {
   worktree: string
   serverUrl: URL
   $: BunShell
-  registerAgent: (agent: import("sjz-opencode-sdk/v2").Agent) => Promise<void>
+  registerAgent: (agent: import("@opencode-ai/sdk/v2").Agent) => Promise<void>
   unregisterAgent: (name: string) => Promise<void>
-  listAgents: () => Promise<import("sjz-opencode-sdk/v2").Agent[]>
+  listAgents: () => Promise<import("@opencode-ai/sdk/v2").Agent[]>
   registerCommand: (cmd: CommandInput) => Promise<void>
   unregisterCommand: (name: string) => Promise<void>
   registerSkill: (skill: SkillInput) => Promise<void>
@@ -125,7 +125,7 @@ export type ToolDefinition = ReturnType<typeof tool>
 
 ```typescript
 // my-plugin.ts
-import { tool } from "@opencode-ai/plugin/tool"
+import { tool } from "sjz-opencode-sdk/tool"
 import { z } from "zod"
 
 export const SearchTool = tool({
@@ -170,7 +170,7 @@ const schema = tool.schema
 
 ```typescript
 // my-plugin.ts
-import type { Plugin, Hooks } from "@opencode-ai/plugin"
+import type { Plugin, Hooks } from "sjz-opencode-sdk"
 
 const myPlugin: Plugin = async (input) => {
   return {
@@ -523,9 +523,9 @@ OpenCode 插件系统提供以下 Hook，按功能分类如下：
 
 | Hook 名称          | 输入                                             | 输出                                             | 说明                |
 | ------------------ | ------------------------------------------------ | ------------------------------------------------ | ------------------- |
-| `agent.register`   | `{ agent: import("sjz-opencode-sdk/v2").Agent }` | -                                                | Agent 注册时调用    |
+| `agent.register`   | `{ agent: import("@opencode-ai/sdk/v2").Agent }` | -                                                | Agent 注册时调用    |
 | `agent.unregister` | `{ name: string }`                               | -                                                | Agent 注销时调用    |
-| `agent.list`       | -                                                | `Promise<import("sjz-opencode-sdk/v2").Agent[]>` | 获取所有 Agent 列表 |
+| `agent.list`       | -                                                | `Promise<import("@opencode-ai/sdk/v2").Agent[]>` | 获取所有 Agent 列表 |
 
 #### 8. 实验性 Hooks
 
@@ -593,9 +593,9 @@ export interface Hooks {
   ) => Promise<void>
 
   // Agent 相关
-  "agent.register"?: (input: { agent: import("sjz-opencode-sdk/v2").Agent }) => Promise<void>
+  "agent.register"?: (input: { agent: import("@opencode-ai/sdk/v2").Agent }) => Promise<void>
   "agent.unregister"?: (input: { name: string }) => Promise<void>
-  "agent.list"?: () => Promise<import("sjz-opencode-sdk/v2").Agent[]>
+  "agent.list"?: () => Promise<import("@opencode-ai/sdk/v2").Agent[]>
 
   // 实验性 hooks
   "experimental.chat.messages.transform"?: (
@@ -720,9 +720,9 @@ OpenCode 支持在运行时动态注册和注销 Agent，无需重启或修改�
 ```typescript
 export type PluginInput = {
   // ... 其他属性
-  registerAgent: (agent: import("sjz-opencode-sdk/v2").Agent) => Promise<void>
+  registerAgent: (agent: import("@opencode-ai/sdk/v2").Agent) => Promise<void>
   unregisterAgent: (name: string) => Promise<void>
-  listAgents: () => Promise<import("sjz-opencode-sdk/v2").Agent[]>
+  listAgents: () => Promise<import("@opencode-ai/sdk/v2").Agent[]>
 }
 ```
 
@@ -789,7 +789,7 @@ export default async function myPlugin(input: PluginInput): Promise<Hooks> {
 ### SDK Agent 类型定义
 
 ```typescript
-// sjz-opencode-sdk/v2
+// @opencode-ai/sdk/v2
 export type Agent = {
   name: string
   description?: string
@@ -1196,7 +1196,7 @@ prompts: [
 
 ```typescript
 // my-opencode-plugin.ts
-import { tool } from "@opencode-ai/plugin/tool"
+import { tool } from "sjz-opencode-sdk/tool"
 import type { Hooks, Plugin } from "@opencode-ai/plugin"
 import { z } from "zod"
 
