@@ -161,16 +161,54 @@ ${plan.analysis}
   checkAbort(context.abort)
 
   const sessionContext = parentSessionId ? { parentSessionId, directory: directory ?? "" } : undefined
-  const executions = await dispatchAll(client, task, config.pipeline.maxFixLoops, sessionContext)
+  const executions = await dispatchAll(client, task, config.pipeline.maxFixLoops, sessionContext, config)
   store.update(task.id, { executions })
 
   checkAbort(context.abort)
 
   // ========================================
-  // Phase 3: Reviewer (complex only)
+  // Phase 3: Reviewer (complex OR sensitive operations detected)
   // ========================================
+  // Check if any execution detected sensitive patterns
+  const hasSensitiveOps = executions.some((exec) => (exec.sensitivePatterns?.length ?? 0) > 0)
+  
+  // Determine if Reviewer should run: complex OR sensitive operations detected
+  const needsReview = (complexity === "complex" || hasSensitiveOps) && config.pipeline.enableReviewer
+  
+  // Log reason for review
+  if (hasSensitiveOps && !config.pipeline.enableReviewer) {
+    // Reviewer disabled but sensitive ops detected - warn user
+    const sensitiveSummary = executions
+      .filter((e) => (e.sensitivePatterns?.length ?? 0) > 0)
+      .map((e) => {
+        const subtask = plan.subtasks.find((s) => s.index === e.subtaskIndex)
+        return `${subtask?.title}: [${e.sensitivePatterns?.join(", ")}]`
+      })
+      .join("; ")
+    client.tui.showToast({
+      body: {
+        message: `⚠️ 检测到敏感操作但 Reviewer 已禁用: ${sensitiveSummary}`,
+        variant: "warning",
+      },
+    })
+  } else if (hasSensitiveOps && complexity !== "complex") {
+    const sensitiveSummary = executions
+      .filter((e) => (e.sensitivePatterns?.length ?? 0) > 0)
+      .map((e) => {
+        const subtask = plan.subtasks.find((s) => s.index === e.subtaskIndex)
+        return `${subtask?.title}: [${e.sensitivePatterns?.join(", ")}]`
+      })
+      .join("; ")
+    client.tui.showToast({
+      body: {
+        message: `🛡️ 检测到敏感操作，强制启用 Reviewer: ${sensitiveSummary}`,
+        variant: "warning",
+      },
+    })
+  }
+
   let reviewResult: string | undefined
-  if (complexity === "complex" && config.pipeline.enableReviewer) {
+  if (needsReview) {
     store.update(task.id, { status: "reviewing" })
     client.tui.showToast({ body: { message: "🔍 Reviewer: 审查代码中...", variant: "info" } })
 
@@ -193,6 +231,17 @@ ${plan.analysis}
       })
       .join("\n\n")
 
+    // Build sensitive operations note for reviewer
+    const sensitiveNote = hasSensitiveOps
+      ? `\n\n## ⚠️ 敏感操作警告\n检测到以下敏感操作，需要重点审查：\n${executions
+        .filter((e) => (e.sensitivePatterns?.length ?? 0) > 0)
+        .map((e) => {
+          const subtask = plan.subtasks.find((s) => s.index === e.subtaskIndex)
+          return `- **${subtask?.title}**: 匹配模式 [${e.sensitivePatterns?.join(", ")}]`
+        })
+        .join("\n")}`
+      : ""
+
     const reviewPrompt = `请审查以下任务的代码实现。
 
 ## 任务背景
@@ -204,6 +253,7 @@ ${plan.analysis}
 
 ## Coder 执行结果
 ${executionSummary}
+${sensitiveNote}
 
 请进行全面的代码审查，包括代码质量、安全性和架构合理性。`
 

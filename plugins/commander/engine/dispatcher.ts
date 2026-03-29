@@ -1,7 +1,60 @@
 import type { OpencodeClient } from "sjz-opencode-sdk"
 import type { Part } from "sjz-opencode-sdk"
-import { extractText } from "../utils"
-import type { Task, Subtask, Execution, FixAttempt } from "../types"
+import { extractText, parseJSON } from "../utils"
+import type { Task, Subtask, Execution, FixAttempt, CommanderConfig } from "../types"
+
+// Timeout utilities
+function withTimeout<T>(promise: Promise<T>, ms: number, taskTitle: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`⏱️ 超时: "${taskTitle}" 执行超过 ${ms / 1000}s`)), ms),
+    ),
+  ])
+}
+
+// Sensitive pattern checker (with error handling for invalid regex)
+function checkSensitivePatterns(text: string, patterns: string[]): string[] {
+  const matched: string[] = []
+  for (const pattern of patterns) {
+    try {
+      const regex = new RegExp(pattern, "i")
+      if (regex.test(text)) {
+        matched.push(pattern)
+      }
+    } catch {
+      // Skip invalid regex patterns
+    }
+  }
+  return matched
+}
+
+// Parse Tester's JSON result with fallback
+interface TesterResult {
+  passed: boolean
+  build?: { command: string; exitCode: number; output?: string; error?: string }
+  tests?: { command: string; exitCode: number; passed?: number; failed?: number }
+  files?: string[]
+  issues?: Array<{ type: string; file?: string; error: string; fixable?: boolean }>
+  summary: string
+}
+
+function parseTesterResult(text: string): TesterResult | null {
+  const parsed = parseJSON(text)
+  if (parsed && typeof parsed === "object" && "passed" in parsed) {
+    return parsed as TesterResult
+  }
+  // Fallback: try to detect from emoji-based format
+  const passed = text.includes("✅ 验证通过")
+  const buildMatch = text.match(/构建[:：]\s*[^→]+→\s*退出码\s*(\d+)/)
+  const testMatch = text.match(/测试[:：]\s*[^→]+→\s*(\d+)\s*个测试通过.*?(\d+)\s*个失败/)
+  return {
+    passed,
+    build: buildMatch ? { command: "(detected)", exitCode: parseInt(buildMatch[1], 10) } : undefined,
+    tests: testMatch ? { command: "(detected)", exitCode: 0, passed: parseInt(testMatch[1], 10), failed: parseInt(testMatch[2], 10) } : undefined,
+    summary: passed ? "验证通过 (fallback)" : "验证失败 (fallback)",
+  }
+}
 
 // extracted: use shared extractText from utils
 
@@ -61,7 +114,8 @@ export async function executeSubtask(
   task: Task,
   subtask: Subtask,
   maxFixLoops: number,
-  sessionContext?: { parentSessionId?: string; directory?: string },
+  sessionContext: { parentSessionId?: string; directory?: string } | undefined,
+  config?: CommanderConfig,
 ): Promise<Execution> {
   const execution: Execution = {
     subtaskIndex: subtask.index,
@@ -100,6 +154,22 @@ export async function executeSubtask(
     task.sessions.push({ sessionId: testerSession.data!.id, phase: "verifying", agent: "tester", title: `Tester·${subtask.title}`, createdAt: Date.now() })
   }
 
+  // --- Sensitive pattern check before execution ---
+  const sensitivePatterns = config?.pipeline?.sensitivePatterns ?? []
+  let detectedSensitivePatterns: string[] = []
+  if (sensitivePatterns.length > 0) {
+    const matched = checkSensitivePatterns(subtask.description, sensitivePatterns)
+    if (matched.length > 0) {
+      detectedSensitivePatterns = matched
+      client.tui.showToast({
+        body: {
+          message: `⚠️ 敏感操作检测: "${subtask.title}" 匹配模式 [${matched.join(", ")}]`,
+          variant: "warning",
+        },
+      })
+    }
+  }
+
   // --- Round 0: Initial implementation ---
   client.tui.showToast({
     body: {
@@ -123,13 +193,18 @@ ${subtask.description}
 
 请实现以上子任务，完成后详细报告你做了什么。`
 
-  const coderResponse = await client.session.prompt({
-    path: { id: execution.coderSessionId },
-    body: {
-      agent: "coder",
-      parts: [{ type: "text" as const, text: coderPrompt }],
-    },
-  })
+  const timeoutMs = config?.pipeline?.timeoutMs ?? 120000 // 2 min default
+  const coderResponse = await withTimeout(
+    client.session.prompt({
+      path: { id: execution.coderSessionId },
+      body: {
+        agent: "coder",
+        parts: [{ type: "text" as const, text: coderPrompt }],
+      },
+    }),
+    timeoutMs,
+    subtask.title,
+  )
   const coderResult = extractText(coderResponse.data?.parts ?? [])
 
   // --- Tester verifies ---
@@ -139,6 +214,23 @@ ${subtask.description}
       variant: "info",
     },
   })
+
+  // --- Check sensitive patterns in coder result ---
+  const resultSensitive = checkSensitivePatterns(coderResult, sensitivePatterns)
+  if (resultSensitive.length > 0) {
+    detectedSensitivePatterns = [...new Set([...detectedSensitivePatterns, ...resultSensitive])]
+    client.tui.showToast({
+      body: {
+        message: `⚠️ 结果包含敏感内容: [${resultSensitive.join(", ")}]`,
+        variant: "warning",
+      },
+    })
+  }
+
+  // Store detected sensitive patterns in execution
+  if (detectedSensitivePatterns.length > 0) {
+    execution.sensitivePatterns = detectedSensitivePatterns
+  }
 
   const testerPrompt = `请验证以下子任务的实现是否正确。
 
@@ -154,20 +246,26 @@ ${subtask.description}
 ## Coder 的实现报告
 ${coderResult}
 
-请运行测试、构建验证，确认实现是否正确。最后给出明确的结论：
-- 如果通过，以 "✅ 验证通过" 开头
-- 如果失败，以 "❌ 验证失败" 开头，并详细说明失败原因`
+请运行测试、构建验证，确认实现是否正确。
+**重要**: 请输出严格的 JSON 格式结果，不要输出其他内容。`
 
-  const testerResponse = await client.session.prompt({
-    path: { id: execution.testerSessionId },
-    body: {
-      agent: "tester",
-      parts: [{ type: "text" as const, text: testerPrompt }],
-    },
-  })
+  const testerResponse = await withTimeout(
+    client.session.prompt({
+      path: { id: execution.testerSessionId },
+      body: {
+        agent: "tester",
+        parts: [{ type: "text" as const, text: testerPrompt }],
+      },
+    }),
+    timeoutMs,
+    `${subtask.title} (验证)`,
+  )
   const testerResult = extractText(testerResponse.data?.parts ?? [])
 
-  const passed = testerResult.includes("✅")
+  // Parse structured result instead of emoji check
+  const parsedResult = parseTesterResult(testerResult)
+  const passed = parsedResult?.passed ?? testerResult.includes("✅")
+  const testExitCode = parsedResult?.tests?.exitCode ?? (passed ? 0 : 1)
   execution.fixAttempts.push({
     round: 0,
     coderResult,
@@ -212,13 +310,17 @@ ${testerResult}
 
 请分析失败原因，修复问题，然后报告你的修改。`
 
-    const fixResponse = await client.session.prompt({
-      path: { id: execution.coderSessionId },
-      body: {
-        agent: "coder",
-        parts: [{ type: "text" as const, text: fixPrompt }],
-      },
-    })
+    const fixResponse = await withTimeout(
+      client.session.prompt({
+        path: { id: execution.coderSessionId },
+        body: {
+          agent: "coder",
+          parts: [{ type: "text" as const, text: fixPrompt }],
+        },
+      }),
+      timeoutMs,
+      `${subtask.title} (修复 ${round}/${maxFixLoops})`,
+    )
     const fixResult = extractText(fixResponse.data?.parts ?? [])
 
     // Re-prompt Tester to re-verify (same session — knows previous context)
@@ -234,20 +336,24 @@ ${testerResult}
 ## Coder 的修复报告
 ${fixResult}
 
-请重新运行测试和验证。给出明确结论：
-- 如果通过，以 "✅ 验证通过" 开头
-- 如果失败，以 "❌ 验证失败" 开头，并详细说明失败原因`
+请重新运行测试和验证。
+**重要**: 请输出严格的 JSON 格式结果，不要输出其他内容。`
 
-    const reVerifyResponse = await client.session.prompt({
-      path: { id: execution.testerSessionId },
-      body: {
-        agent: "tester",
-        parts: [{ type: "text" as const, text: reVerifyPrompt }],
-      },
-    })
+    const reVerifyResponse = await withTimeout(
+      client.session.prompt({
+        path: { id: execution.testerSessionId },
+        body: {
+          agent: "tester",
+          parts: [{ type: "text" as const, text: reVerifyPrompt }],
+        },
+      }),
+      timeoutMs,
+      `${subtask.title} (验证 ${round}/${maxFixLoops})`,
+    )
     const reVerifyResult = extractText(reVerifyResponse.data?.parts ?? [])
 
-    const fixPassed = reVerifyResult.includes("✅")
+    const reParsedResult = parseTesterResult(reVerifyResult)
+    const fixPassed = reParsedResult?.passed ?? reVerifyResult.includes("✅")
     execution.fixAttempts.push({
       round,
       coderResult: fixResult,
@@ -293,7 +399,18 @@ export async function dispatchAll(
   task: Task,
   maxFixLoops: number,
   sessionContext?: { parentSessionId?: string; directory?: string },
+  config?: CommanderConfig,
 ): Promise<Execution[]> {
+  // Warn once if config is missing (sensitive checks may be disabled)
+  if (!config) {
+    client.tui.showToast({
+      body: {
+        message: `⚠️ 配置未传递，敏感词检查已禁用`,
+        variant: "warning",
+      },
+    })
+  }
+
   const plan = task.plan
   if (!plan) {
     throw new Error("Cannot dispatch without a plan")
@@ -318,7 +435,7 @@ export async function dispatchAll(
     })
 
     const settled = await Promise.allSettled(
-      wave.map((subtask) => executeSubtask(client, task, subtask, maxFixLoops, sessionContext)),
+      wave.map((subtask) => executeSubtask(client, task, subtask, maxFixLoops, sessionContext, config)),
     )
     const waveResults: Execution[] = settled.map((r, idx) => {
       if (r.status === "fulfilled") return r.value

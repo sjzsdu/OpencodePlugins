@@ -70,6 +70,7 @@ export interface Execution {
   error?: string
   startedAt: number
   completedAt?: number
+  sensitivePatterns?: string[]  // Detected sensitive patterns in this execution
 }
 
 export interface FixAttempt {
@@ -103,6 +104,7 @@ export interface CommanderConfig {
     maxFixLoops: number
     enableReviewer: boolean
     sensitivePatterns: string[]
+    timeoutMs?: number  // Optional timeout for each agent prompt (default: 120000)
   }
   store: {
     dataDir: string
