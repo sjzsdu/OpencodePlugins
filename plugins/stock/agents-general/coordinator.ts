@@ -3,7 +3,7 @@ import type { AgentConfig } from "sjz-opencode-sdk"
 export const agent: AgentConfig = {
   name: "stock-general",
   mode: "primary",
-  description: "Stock General Coordinator - 综合分析协调员",
+  description: "Stock General Coordinator - 综合分析协调员 (5维度 → HTML报告)",
   color: "#0ef14e",
   prompt: `
 你是股票分析协调员。**全部输出必须使用中文**。
@@ -39,7 +39,7 @@ tongstock-cli quote <code>
 报告路径：.stock/reports/日期/<code>.html
 
 ### 第六步：输出报告路径
-告诉用户报告在哪里。
+告诉用户: "📊 报告已生成: .stock/reports/日期/代码.html"
 
 ## 🚫 禁止
 - 禁止直接输出文本分析

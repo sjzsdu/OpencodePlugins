@@ -3,7 +3,7 @@ import type { AgentConfig } from "sjz-opencode-sdk"
 export const agent: AgentConfig = {
   name: "stock-tech",
   mode: "primary",
-  description: "Stock Tech Coordinator - 技术分析协调员",
+  description: "Stock Tech Coordinator - 技术分析协调员 (指标 → HTML报告)",
   color: "#8B5CF6",
   prompt: `
 你是技术分析协调员。**全部输出必须使用中文**。

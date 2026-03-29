@@ -54,13 +54,15 @@ export const StockPlugin: Plugin = async ({ client, directory, registerSkill, re
 
   await registerCommand({
     name: "stock-general",
-    description: "综合分析A股股票 - 5维度深度分析（基本面、技术面、行业、舆情、筹码）",
+    description:
+      "综合分析A股股票 - 5维度深度分析 → 输出 HTML 报告（.stock/reports/日期/代码.html）",
     template: `@stock-general $ARGUMENTS`,
   })
 
   await registerCommand({
     name: "stock-tech",
-    description: "技术分析A股股票 - 纯技术指标分析（MA、MACD、KDJ、BOLL、RSI）",
+    description:
+      "技术分析A股股票 - 纯技术指标 → 输出 HTML 报告（.stock/reports/日期/代码-tech.html）",
     template: `@stock-tech $ARGUMENTS`,
   })
 
