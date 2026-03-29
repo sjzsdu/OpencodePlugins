@@ -130,10 +130,10 @@ description: Review code changes
 ---
 
 Review the following code changes:
-{{input}}
+$ARGUMENTS
 ```
 
-The `{{input}}` placeholder is replaced with user input.
+The `$ARGUMENTS` placeholder is replaced with user input.
 
 ## Configuration
 
@@ -175,7 +175,7 @@ export SUPERPOWERS_DIR=/path/to/your/superpowers
 
 1. Verify skill directories contain `SKILL.md`
 2. Check command files have proper frontmatter
-3. Ensure `{{input}}` placeholder is used for commands that need user input
+3. Ensure `$ARGUMENTS` placeholder is used for commands that need user input
 
 ## See Also
 

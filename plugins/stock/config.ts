@@ -2,7 +2,8 @@ import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import type { AgentConfig } from "sjz-opencode-sdk"
 import type { AnalystConfig, AnalystUserConfig, WeightConfig, WeightPreset } from "./types"
-import { AGENTS } from "./agents"
+import { AGENTS_GENERAL } from "./agents-general"
+import { AGENTS_TECHNICAL } from "./agents-technical"
 
 /** 预设权重方案 */
 const WEIGHT_PRESETS: Record<WeightPreset, WeightConfig> = {
@@ -46,9 +47,13 @@ export function loadConfig(directory: string): AnalystConfig {
     // 解析失败则使用默认值
   }
 
-  // 合并 agent model 配置
   const agents: Record<string, AgentConfig> = {}
-  for (const [id, agentDef] of Object.entries(AGENTS)) {
+
+  for (const [id, agentDef] of Object.entries(AGENTS_GENERAL)) {
+    const userModel = userConfig.agents?.[id]?.model
+    agents[id] = userModel ? { ...agentDef, model: userModel } : { ...agentDef }
+  }
+  for (const [id, agentDef] of Object.entries(AGENTS_TECHNICAL)) {
     const userModel = userConfig.agents?.[id]?.model
     agents[id] = userModel ? { ...agentDef, model: userModel } : { ...agentDef }
   }

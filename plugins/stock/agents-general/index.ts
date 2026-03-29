@@ -7,8 +7,8 @@ import { agent as sentiment } from "./sentiment"
 import { agent as chip } from "./chip"
 import { agent as reporter } from "./report-generator"
 
-export const AGENTS: Record<string, AgentConfig> = {
-  stock: coordinator,
+export const AGENTS_GENERAL: Record<string, AgentConfig> = {
+  "stock-general": coordinator,
   finance: fundamentalist,
   chart: technician,
   sector: industry,

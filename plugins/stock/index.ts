@@ -7,35 +7,24 @@ import { loadConfig } from "./config"
 const TONGSTOCK_GITHUB = "https://github.com/sjzsdu/tongstock.git"
 const GLOBAL_TONGSTOCK_DIR = join(process.env.HOME || "", ".tongstock")
 
-/**
- * Load skill content with fallback chain:
- * 1. Remote repo (~/.tongstock/skills/<name>/SKILL.md)
- * 2. Bundled fallback (plugins/stock/skills/<name>.md)
- */
 function loadSkillContent(name: string, pluginDir: string): string | null {
-  // Try remote first
   const remotePath = join(GLOBAL_TONGSTOCK_DIR, "skills", name, "SKILL.md")
   if (existsSync(remotePath)) {
     try {
       return readFileSync(remotePath, "utf-8")
-    } catch { /* fall through */ }
+    } catch {}
   }
 
-  // Fallback to bundled
   const bundledPath = join(pluginDir, "skills", `${name}.md`)
   if (existsSync(bundledPath)) {
     try {
       return readFileSync(bundledPath, "utf-8")
-    } catch { /* fall through */ }
+    } catch {}
   }
 
   return null
 }
 
-/**
- * Clone or pull the tongstock repo for latest skills.
- * Runs async in background — never blocks plugin initialization.
- */
 function syncTongstockRepo(): void {
   setImmediate(() => {
     try {
@@ -51,22 +40,30 @@ function syncTongstockRepo(): void {
           timeout: 30_000,
         })
       }
-    } catch {
-      // Clone/pull failed — will fall back to bundled skills
-    }
+    } catch {}
   })
 }
 
-export const StockPlugin: Plugin = async ({ client, directory, registerSkill }) => {
+export const StockPlugin: Plugin = async ({ client, directory, registerSkill, registerCommand }) => {
   const config = loadConfig(directory)
   const pluginDir = import.meta.dir
 
-  // Sync remote skills repo (non-blocking on failure)
   syncTongstockRepo()
 
   client.app.log({ body: { service: "stock", level: "info", message: "📊 Stock Analyst plugin initialized" } })
 
-  // Register skills with remote → bundled fallback
+  await registerCommand({
+    name: "stock-general",
+    description: "综合分析A股股票 - 5维度深度分析（基本面、技术面、行业、舆情、筹码）",
+    template: `@stock-general $ARGUMENTS`,
+  })
+
+  await registerCommand({
+    name: "stock-tech",
+    description: "技术分析A股股票 - 纯技术指标分析（MA、MACD、KDJ、BOLL、RSI）",
+    template: `@stock-tech $ARGUMENTS`,
+  })
+
   const skills = [
     { name: "tongstock-cli", description: "TDX (通达信) CLI/HTTP API for Chinese A-share market data" },
     { name: "tongstock-workflow", description: "Pre-built workflows for Chinese A-share analysis" },
@@ -80,8 +77,6 @@ export const StockPlugin: Plugin = async ({ client, directory, registerSkill }) 
       } catch (e) {
         console.error(`[stock] Failed to register ${skill.name} skill:`, e)
       }
-    } else {
-      console.error(`[stock] Skill ${skill.name} not found (neither remote nor bundled)`)
     }
   }
 
