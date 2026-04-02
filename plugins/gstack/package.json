@@ -1,0 +1,33 @@
+{
+  "name": "opencode-plugin-gstack",
+  "version": "0.1.0",
+  "description": "GStack - Virtual software engineering team with specialized AI skills for OpenCode",
+  "main": "index.ts",
+  "types": "index.ts",
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "files": [
+    "**/*.ts"
+  ],
+  "peerDependencies": {
+    "@opencode-ai/plugin": ">=1.2.0"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "gstack",
+    "software-factory",
+    "ai-engineering-team",
+    "skills",
+    "commands"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sjzsdu/OpencodePlugins.git",
+    "directory": "plugins/gstack"
+  },
+  "author": "sunjuzhong",
+  "license": "MIT"
+}
