@@ -1,4 +1,4 @@
-import { tool } from "@opencode-ai/plugin/tool"
+import { tool } from "sjz-opencode-plugin/tool"
 import { z } from "zod"
 import type { OpencodeClient } from "sjz-opencode-sdk"
 import type { TaskStore, CommanderConfig } from "../types"

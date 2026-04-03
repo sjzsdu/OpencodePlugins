@@ -1,4 +1,4 @@
-import type { Plugin } from "sjz-opencode-sdk"
+import type { PluginModule } from "sjz-opencode-plugin"
 import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { execSync } from "node:child_process"
@@ -44,53 +44,60 @@ function syncTongstockRepo(): void {
   })
 }
 
-export const StockPlugin: Plugin = async ({ client, directory, registerSkill, registerCommand }) => {
-  const config = loadConfig(directory)
-  const pluginDir = import.meta.dir
+const plugin: PluginModule = {
+  id: "stock",
+  async server({ client, directory, registerSkill, registerCommand }) {
+    const config = loadConfig(directory)
+    const pluginDir = import.meta.dir
 
-  syncTongstockRepo()
+    syncTongstockRepo()
 
-  client.app.log({ body: { service: "stock", level: "info", message: "📊 Stock Analyst plugin initialized" } })
+    client.app.log({ body: { service: "stock", level: "info", message: "📊 Stock Analyst plugin initialized" } })
 
-  await registerCommand({
-    name: "stock-general",
-    description:
-      "综合分析A股股票 - 5维度深度分析 → 输出 HTML 报告（.stock/reports/日期/代码.html）",
-    template: `@stock-general $ARGUMENTS`,
-  })
+    await registerCommand({
+      name: "stock-general",
+      description:
+        "综合分析A股股票 - 5维度深度分析 → 输出 HTML 报告（.stock/reports/日期/代码.html）",
+      agent: "coordinator",
+      template: `@stock-general $ARGUMENTS`,
+    })
 
-  await registerCommand({
-    name: "stock-tech",
-    description:
-      "技术分析A股股票 - 纯技术指标 → 输出 HTML 报告（.stock/reports/日期/代码-tech.html）",
-    template: `@stock-tech $ARGUMENTS`,
-  })
+    await registerCommand({
+      name: "stock-tech",
+      description:
+        "技术分析A股股票 - 纯技术指标 → 输出 HTML 报告（.stock/reports/日期/代码-tech.html）",
+      agent: "coordinator",
+      template: `@stock-tech $ARGUMENTS`,
+    })
 
-  const skills = [
-    { name: "tongstock-cli", description: "TDX (通达信) CLI/HTTP API for Chinese A-share market data" },
-    { name: "tongstock-workflow", description: "Pre-built workflows for Chinese A-share analysis" },
-  ]
+    const skills = [
+      { name: "tongstock-cli", description: "TDX (通达信) CLI/HTTP API for Chinese A-share market data" },
+      { name: "tongstock-workflow", description: "Pre-built workflows for Chinese A-share analysis" },
+    ]
 
-  for (const skill of skills) {
-    const content = loadSkillContent(skill.name, pluginDir)
-    if (content) {
-      try {
-        await registerSkill({ name: skill.name, description: skill.description, content })
-      } catch (e) {
-        console.error(`[stock] Failed to register ${skill.name} skill:`, e)
+    for (const skill of skills) {
+      const content = loadSkillContent(skill.name, pluginDir)
+      if (content) {
+        try {
+          await registerSkill({ name: skill.name, description: skill.description, content })
+        } catch (e) {
+          console.error(`[stock] Failed to register ${skill.name} skill:`, e)
+        }
       }
     }
-  }
 
-  return {
-    config: async (openCodeConfig: any) => {
-      const configAny = openCodeConfig as any
-      if (!configAny.agent) {
-        configAny.agent = {}
-      }
-      for (const [id, agentConfig] of Object.entries(config.agents)) {
-        configAny.agent[id] = agentConfig
-      }
-    },
-  }
+    return {
+      config: async (openCodeConfig: any) => {
+        const configAny = openCodeConfig as any
+        if (!configAny.agent) {
+          configAny.agent = {}
+        }
+        for (const [id, agentConfig] of Object.entries(config.agents)) {
+          configAny.agent[id] = agentConfig
+        }
+      },
+    }
+  },
 }
+
+export default plugin

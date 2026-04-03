@@ -1,6 +1,6 @@
 import type { OpencodeClient } from "sjz-opencode-sdk"
 import type { Part } from "sjz-opencode-sdk"
-import type { ToolContext } from "@opencode-ai/plugin"
+import type { ToolContext } from "sjz-opencode-plugin"
 import type { Task, TaskStore, CommanderConfig, Plan, PipelineSession } from "../types"
 import { classifyComplexity } from "./classifier"
 import { dispatchAll } from "./dispatcher"

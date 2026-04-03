@@ -1,6 +1,6 @@
 import type { OpencodeClient } from "sjz-opencode-sdk"
 import type { Part } from "sjz-opencode-sdk"
-import type { ToolContext } from "@opencode-ai/plugin"
+import type { ToolContext } from "sjz-opencode-plugin"
 import type { Edict, EdictStore, EmperorConfig, Execution, Plan } from "../types"
 import type { PipelineSession } from "../types"
 import { reviewWithMenxia } from "./reviewer"

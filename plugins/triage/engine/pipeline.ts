@@ -1,5 +1,5 @@
 import type { OpencodeClient } from "sjz-opencode-sdk"
-import type { ToolContext } from "sjz-opencode-sdk"
+import type { ToolContext } from "sjz-opencode-plugin"
 import type {
   TriageTask,
   TriageStore,

@@ -1,4 +1,4 @@
-import { tool } from "@opencode-ai/plugin"
+import { tool } from "sjz-opencode-plugin"
 import type { EdictStore } from "../types"
 
 export function createEdictStatusTool(store: EdictStore) {

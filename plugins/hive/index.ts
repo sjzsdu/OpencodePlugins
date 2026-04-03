@@ -1,4 +1,4 @@
-import type { Plugin } from "sjz-opencode-sdk"
+import type { PluginModule } from "sjz-opencode-plugin"
 import type { Domain } from "./types"
 import { loadConfig } from "./config"
 import { HiveEventBus } from "./eventbus/bus"
@@ -18,60 +18,56 @@ import { HivePipeline } from "./pipeline"
 import { createRunTool } from "./tools/run"
 import { createEventReactorHook } from "./hooks/event-reactor"
 
-export const HivePlugin: Plugin = async ({ client, directory, registerAgent, registerCommand }) => {
-  const config = loadConfig(directory)
-  const store = new HiveStore(directory, config.store.dataDir)
+const plugin: PluginModule = {
+  id: "hive",
+  async server({ client, directory, registerAgent, registerCommand }) {
+    const config = loadConfig(directory)
+    const store = new HiveStore(directory, config.store.dataDir)
 
-  // EventBus with persistence
-  const eventBus = new HiveEventBus(
-    (events) => store.saveEvents(events),
-    () => store.loadEvents(),
-  )
-  eventBus.restore()
+    const eventBus = new HiveEventBus(
+      (events) => store.saveEvents(events),
+      () => store.loadEvents(),
+    )
+    eventBus.restore()
 
-  // Session → Domain mapping
-  const sessionToDomain = new Map<string, string>()
+    const sessionToDomain = new Map<string, string>()
 
-  const discoveredDomains = discoverDomains(directory, config, registerAgent)
+    const discoveredDomains = discoverDomains(directory, config, registerAgent)
 
-  const PROJECT_DOMAIN: Domain = {
-    id: "project",
-    name: "Project",
-    description: "项目级通用域：根目录配置、共享代码、新模块初始化、跨域杂项",
-    paths: [],
-    techStack: "",
-    responsibilities: "根目录配置文件、共享工具代码、新模块搭建、不属于任何专业域的任务",
-    interfaces: [],
-    dependencies: [],
-    conventions: [],
-  }
-  const domains = discoveredDomains.some(d => d.id === "project")
-    ? discoveredDomains
-    : [PROJECT_DOMAIN, ...discoveredDomains]
+    const PROJECT_DOMAIN: Domain = {
+      id: "project",
+      name: "Project",
+      description: "项目级通用域：根目录配置、共享代码、新模块初始化、跨域杂项",
+      paths: [],
+      techStack: "",
+      responsibilities: "根目录配置文件、共享工具代码、新模块搭建、不属于任何专业域的任务",
+      interfaces: [],
+      dependencies: [],
+      conventions: [],
+    }
+    const domains = discoveredDomains.some(d => d.id === "project")
+      ? discoveredDomains
+      : [PROJECT_DOMAIN, ...discoveredDomains]
 
-  // Subscribe domains to EventBus
-  for (const domain of domains) {
-    eventBus.autoSubscribe(domain)
-  }
+    for (const domain of domains) {
+      eventBus.autoSubscribe(domain)
+    }
 
-  // Generate agent configs
-  const agents = generateAgents(domains, config)
+    const agents = generateAgents(domains, config)
 
-  // Set up autonomy handler
-  const autonomyHandler = createAutonomyHandler(
-    eventBus, domains, config, client, sessionToDomain,
-  )
+    const autonomyHandler = createAutonomyHandler(
+      eventBus, domains, config, client, sessionToDomain,
+    )
 
-  // Initialize Hive pipeline (wire-up once pipeline.ts is available)
-  const pipeline = new HivePipeline(eventBus, domains, client, sessionToDomain, config)
+    const pipeline = new HivePipeline(eventBus, domains, client, sessionToDomain, config)
 
-  // Register slash command
-  try {
-    await registerCommand({
-      name: "hive-init",
-      description: "初始化 Hive：创建配置文件、存储目录和自动发现项目中的 Domain",
-      subtask: true,
-      template: `
+    try {
+      await registerCommand({
+        name: "hive-init",
+        description: "初始化 Hive：创建配置文件、存储目录和自动发现项目中的 Domain",
+        subtask: true,
+        agent: "queen",
+        template: `
 请执行 Hive 初始化任务。
 
 ## 用户参数
@@ -254,38 +250,39 @@ Domain 的本质是"一个相对独立的职责单元，有明确的代码边界
   - 每个 Domain 的 paths, techStack, responsibilities, dependencies
   - 项目的主语言和整体目标（一句话）
       `.trim(),
-    })
-  } catch (error) {
-    console.error("[hive] Failed to register hive-init command:", error)
-  }
+      })
+    } catch (error) {
+      console.error("[hive] Failed to register hive-init command:", error)
+    }
 
-  // Prepare hooks and tools
-  const fileWatcherHook = createFileWatcherHook(
-    eventBus, domains, sessionToDomain, autonomyHandler,
-    directory, config, registerAgent,
-  )
-  const eventReactorHook = createEventReactorHook(eventBus, domains, client, sessionToDomain)
+    const fileWatcherHook = createFileWatcherHook(
+      eventBus, domains, sessionToDomain, autonomyHandler,
+      directory, config, registerAgent,
+    )
+    const eventReactorHook = createEventReactorHook(eventBus, domains, client, sessionToDomain)
 
-  return {
-    config: createConfigHook(agents),
+    return {
+      config: createConfigHook(agents),
 
-    "experimental.chat.system.transform": createSystemTransformHook(
-      eventBus, sessionToDomain,
-    ),
+      "experimental.chat.system.transform": createSystemTransformHook(
+        eventBus, sessionToDomain,
+      ),
 
-    // Combine file-watcher hook with event-reactor hook
-    "tool.execute.after": async (input, output) => {
-      await fileWatcherHook(input, output)
-      await eventReactorHook(input, output)
-    },
+      "tool.execute.after": async (input, output) => {
+        await fileWatcherHook(input, output)
+        await eventReactorHook(input, output)
+      },
 
-    tool: {
-      hive_emit: createEmitTool(eventBus, sessionToDomain),
-      hive_status: createStatusTool(domains, eventBus, pipeline),
-      hive_broadcast: createBroadcastTool(eventBus, domains, client, sessionToDomain, config),
-      hive_negotiate: createNegotiateTool(eventBus, domains, client, sessionToDomain),
-      hive_dispatch: createDispatchTool(eventBus, domains, client, sessionToDomain),
-      hive_run: createRunTool(pipeline),
-    },
-  }
+      tool: {
+        hive_emit: createEmitTool(eventBus, sessionToDomain),
+        hive_status: createStatusTool(domains, eventBus, pipeline),
+        hive_broadcast: createBroadcastTool(eventBus, domains, client, sessionToDomain, config),
+        hive_negotiate: createNegotiateTool(eventBus, domains, client, sessionToDomain),
+        hive_dispatch: createDispatchTool(eventBus, domains, client, sessionToDomain),
+        hive_run: createRunTool(pipeline),
+      },
+    }
+  },
 }
+
+export default plugin

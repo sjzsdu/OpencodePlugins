@@ -1,0 +1,34 @@
+{
+  "name": "opencode-plugin-docs",
+  "version": "0.1.0",
+  "description": "Docs — 代码逆向文档生成插件，PRD、架构图、UML、流程图、ER图、MermaidJS图表",
+  "main": "index.ts",
+  "types": "index.ts",
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "files": [
+    "**/*.ts"
+  ],
+  "peerDependencies": {
+    "@opencode-ai/plugin": ">=1.2.0"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "docs",
+    "documentation",
+    "code-analysis",
+    "mermaid",
+    "uml",
+    "reverse-engineering"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sjzsdu/OpencodePlugins.git",
+    "directory": "plugins/docs"
+  },
+  "author": "sunjuzhong",
+  "license": "MIT"
+}

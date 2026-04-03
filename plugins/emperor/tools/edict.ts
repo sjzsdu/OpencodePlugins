@@ -1,4 +1,4 @@
-import { tool } from "@opencode-ai/plugin"
+import { tool } from "sjz-opencode-plugin"
 import type { OpencodeClient } from "sjz-opencode-sdk"
 import type { EdictStore, EmperorConfig } from "../types"
 import { runPipeline } from "../engine/pipeline"

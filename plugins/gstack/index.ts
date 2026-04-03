@@ -1,13 +1,7 @@
-import type { Plugin, Hooks } from "sjz-opencode-sdk"
-import { tool } from "sjz-opencode-sdk/tool"
+import type { PluginModule } from "sjz-opencode-plugin"
+import { tool } from "sjz-opencode-plugin/tool"
 import { z } from "zod"
 
-// Power Tools implementations
-
-/**
- * /codex - Independent code review using external tools
- * Provides a "Second Opinion" review distinct from the main review
- */
 const codexTool = tool({
   description: "Run independent code review (Second Opinion) - Uses external AI to provide a different perspective on the code. Works alongside /review command for cross-model analysis.",
   args: {
@@ -48,10 +42,6 @@ In ${mode} mode, I'll analyze the code and provide detailed feedback.${args.targ
   },
 })
 
-/**
- * /careful - Safety guardrails for destructive commands
- * Warns before executing dangerous commands like rm -rf, DROP TABLE, force-push
- */
 const carefulTool = tool({
   description: "Safety guardrails - warns before destructive commands (rm -rf, DROP TABLE, force-push, etc.). Say 'be careful' to activate warnings for any command.",
   args: {
@@ -128,10 +118,6 @@ Or add to always-allow list with a pattern.`
   },
 })
 
-/**
- * /freeze - Edit lock to restrict file edits to one directory
- * Prevents accidental changes outside the intended scope
- */
 const freezeTool = tool({
   description: "Edit lock - restricts file edits to a specific directory to prevent accidental changes outside the intended scope during debugging.",
   args: {
@@ -139,7 +125,6 @@ const freezeTool = tool({
     action: z.enum(["lock", "unlock", "status", "add"]).optional().describe("Action: lock (set lock), unlock (remove lock), status (check current lock), add (add directory to allowed list)"),
   },
   async execute(args, context) {
-    // This is a conceptual tool - actual implementation would track state
     const lockedDir = args.directory || "."
 
     context.metadata({
@@ -181,10 +166,6 @@ Use \`/freeze unlock\` to remove the lock.`
   },
 })
 
-/**
- * /guard - Combines /careful and /freeze for maximum safety
- * Activates both safety guardrails and edit lock
- */
 const guardTool = tool({
   description: "Maximum safety mode - combines /careful (dangerous command warnings) and /freeze (edit lock) for production work safety.",
   args: {
@@ -1005,178 +986,196 @@ Retro summary:
 User request: $ARGUMENTS`,
 }
 
-export const GStackPlugin: Plugin = async ({ registerCommand, registerSkill, client }) => {
-  client.app.log({
-    body: {
-      service: "gstack",
-      level: "info",
-      message: "GStack plugin initialized",
-    },
-  })
+const plugin: PluginModule = {
+  id: "gstack",
+  async server({ registerCommand, registerSkill, client }) {
+    client.app.log({
+      body: {
+        service: "gstack",
+        level: "info",
+        message: "GStack plugin initialized",
+      },
+    })
 
-  const commands = [
-    {
-      name: "office-hours",
-      description: "Product framing and design doc creation (6 questions)",
-      template: skillTemplates["office-hours"],
-      subtask: true,
-    },
-    {
-      name: "plan-ceo-review",
-      description: "CEO-level product scope and strategy review",
-      template: skillTemplates["plan-ceo-review"],
-      subtask: true,
-    },
-    {
-      name: "plan-eng-review",
-      description: "Engineering architecture and test planning",
-      template: skillTemplates["plan-eng-review"],
-      subtask: true,
-    },
-    {
-      name: "plan-design-review",
-      description: "Senior design audit and improvement",
-      template: skillTemplates["plan-design-review"],
-      subtask: true,
-    },
-    {
-      name: "design-consultation",
-      description: "Build design system and mockups",
-      template: skillTemplates["design-consultation"],
-      subtask: true,
-    },
-    {
-      name: "design-shotgun",
-      description: "Generate and compare multiple design variants",
-      template: skillTemplates["design-shotgun"],
-      subtask: true,
-    },
-    {
-      name: "design-html",
-      description: "Generate production-quality HTML layouts",
-      template: skillTemplates["design-html"],
-      subtask: true,
-    },
-    {
-      name: "review",
-      description: "Staff engineer code review and bug fixing",
-      template: skillTemplates["review"],
-      subtask: true,
-    },
-    {
-      name: "investigate",
-      description: "Debugging and root cause analysis",
-      template: skillTemplates["investigate"],
-      subtask: true,
-    },
-    {
-      name: "qa",
-      description: "Automated QA testing with real browser interaction",
-      template: skillTemplates["qa"],
-      subtask: true,
-    },
-    {
-      name: "cso",
-      description: "Security audits (OWASP, STRIDE)",
-      template: skillTemplates["cso"],
-      subtask: true,
-    },
-    {
-      name: "ship",
-      description: "Release engineering, test bootstrapping, PR creation",
-      template: skillTemplates["ship"],
-      subtask: true,
-    },
-    {
-      name: "land-and-deploy",
-      description: "Merge, deploy, and verify production health",
-      template: skillTemplates["land-and-deploy"],
-      subtask: true,
-    },
-    {
-      name: "canary",
-      description: "Post-deploy monitoring and alerting",
-      template: skillTemplates["canary"],
-      subtask: true,
-    },
-    {
-      name: "benchmark",
-      description: "Performance baseline and regression testing",
-      template: skillTemplates["benchmark"],
-      subtask: true,
-    },
-    {
-      name: "document-release",
-      description: "Auto-update project documentation",
-      template: skillTemplates["document-release"],
-      subtask: true,
-    },
-    {
-      name: "retro",
-      description: "Weekly team retrospectives and metrics",
-      template: skillTemplates["retro"],
-      subtask: true,
-    },
-  ]
+    const commands = [
+      {
+        name: "office-hours",
+        description: "Product framing and design doc creation (6 questions)",
+        agent: "office-hours",
+        subtask: true,
+        template: skillTemplates["office-hours"],
+      },
+      {
+        name: "plan-ceo-review",
+        description: "CEO-level product scope and strategy review",
+        agent: "plan-ceo-review",
+        subtask: true,
+        template: skillTemplates["plan-ceo-review"],
+      },
+      {
+        name: "plan-eng-review",
+        description: "Engineering architecture and test planning",
+        agent: "plan-eng-review",
+        subtask: true,
+        template: skillTemplates["plan-eng-review"],
+      },
+      {
+        name: "plan-design-review",
+        description: "Senior design audit and improvement",
+        agent: "plan-design-review",
+        subtask: true,
+        template: skillTemplates["plan-design-review"],
+      },
+      {
+        name: "design-consultation",
+        description: "Build design system and mockups",
+        agent: "design-consultation",
+        subtask: true,
+        template: skillTemplates["design-consultation"],
+      },
+      {
+        name: "design-shotgun",
+        description: "Generate and compare multiple design variants",
+        agent: "design-shotgun",
+        subtask: true,
+        template: skillTemplates["design-shotgun"],
+      },
+      {
+        name: "design-html",
+        description: "Generate production-quality HTML layouts",
+        agent: "design-html",
+        subtask: true,
+        template: skillTemplates["design-html"],
+      },
+      {
+        name: "review",
+        description: "Staff engineer code review and bug fixing",
+        agent: "review",
+        subtask: true,
+        template: skillTemplates["review"],
+      },
+      {
+        name: "investigate",
+        description: "Debugging and root cause analysis",
+        agent: "investigate",
+        subtask: true,
+        template: skillTemplates["investigate"],
+      },
+      {
+        name: "qa",
+        description: "Automated QA testing with real browser interaction",
+        agent: "qa",
+        subtask: true,
+        template: skillTemplates["qa"],
+      },
+      {
+        name: "cso",
+        description: "Security audits (OWASP, STRIDE)",
+        agent: "cso",
+        subtask: true,
+        template: skillTemplates["cso"],
+      },
+      {
+        name: "ship",
+        description: "Release engineering, test bootstrapping, PR creation",
+        agent: "ship",
+        subtask: true,
+        template: skillTemplates["ship"],
+      },
+      {
+        name: "land-and-deploy",
+        description: "Merge, deploy, and verify production health",
+        agent: "land-and-deploy",
+        subtask: true,
+        template: skillTemplates["land-and-deploy"],
+      },
+      {
+        name: "canary",
+        description: "Post-deploy monitoring and alerting",
+        agent: "canary",
+        subtask: true,
+        template: skillTemplates["canary"],
+      },
+      {
+        name: "benchmark",
+        description: "Performance baseline and regression testing",
+        agent: "benchmark",
+        subtask: true,
+        template: skillTemplates["benchmark"],
+      },
+      {
+        name: "document-release",
+        description: "Auto-update project documentation",
+        agent: "document-release",
+        subtask: true,
+        template: skillTemplates["document-release"],
+      },
+      {
+        name: "retro",
+        description: "Weekly team retrospectives and metrics",
+        agent: "retro",
+        subtask: true,
+        template: skillTemplates["retro"],
+      },
+    ]
 
-  for (const cmd of commands) {
-    try {
-      await registerCommand(cmd)
-    } catch (e) {
-      client.app.log({
-        body: {
-          service: "gstack",
-          level: "warn",
-          message: `Failed to register command ${cmd.name}: ${e instanceof Error ? e.message : String(e)}`,
-        },
-      })
+    for (const cmd of commands) {
+      try {
+        await registerCommand(cmd)
+      } catch (e) {
+        client.app.log({
+          body: {
+            service: "gstack",
+            level: "warn",
+            message: `Failed to register command ${cmd.name}: ${e instanceof Error ? e.message : String(e)}`,
+          },
+        })
+      }
     }
-  }
 
-  // Register Power Tools
-  const tools: Hooks["tool"] = {
-    gstack_codex: codexTool,
-    gstack_careful: carefulTool,
-    gstack_freeze: freezeTool,
-    gstack_guard: guardTool,
-  }
-
-  // Register Skills
-  const skills = [
-    { name: "gstack/office-hours", description: "Product framing with 6 questions", content: skillTemplates["office-hours"] },
-    { name: "gstack/plan-ceo-review", description: "CEO-level product scope review", content: skillTemplates["plan-ceo-review"] },
-    { name: "gstack/plan-eng-review", description: "Engineering architecture review", content: skillTemplates["plan-eng-review"] },
-    { name: "gstack/plan-design-review", description: "Design UX audit", content: skillTemplates["plan-design-review"] },
-    { name: "gstack/design-consultation", description: "Design system and mockups", content: skillTemplates["design-consultation"] },
-    { name: "gstack/design-shotgun", description: "Multiple design variants", content: skillTemplates["design-shotgun"] },
-    { name: "gstack/design-html", description: "Production HTML layouts", content: skillTemplates["design-html"] },
-    { name: "gstack/review", description: "Staff engineer code review", content: skillTemplates["review"] },
-    { name: "gstack/investigate", description: "Debugging and root cause analysis", content: skillTemplates["investigate"] },
-    { name: "gstack/qa", description: "Automated browser testing", content: skillTemplates["qa"] },
-    { name: "gstack/cso", description: "Security audit (OWASP/STRIDE)", content: skillTemplates["cso"] },
-    { name: "gstack/ship", description: "Release engineering and PR", content: skillTemplates["ship"] },
-    { name: "gstack/land-and-deploy", description: "Production deploy and verify", content: skillTemplates["land-and-deploy"] },
-    { name: "gstack/canary", description: "Post-deploy monitoring", content: skillTemplates["canary"] },
-    { name: "gstack/benchmark", description: "Performance testing", content: skillTemplates["benchmark"] },
-    { name: "gstack/document-release", description: "Documentation update", content: skillTemplates["document-release"] },
-    { name: "gstack/retro", description: "Team retrospective", content: skillTemplates["retro"] },
-  ]
-
-  for (const skill of skills) {
-    try {
-      await registerSkill(skill)
-    } catch (e) {
-      client.app.log({
-        body: {
-          service: "gstack",
-          level: "warn",
-          message: `Failed to register skill ${skill.name}: ${String(e)}`,
-        },
-      })
+    const tools = {
+      gstack_codex: codexTool,
+      gstack_careful: carefulTool,
+      gstack_freeze: freezeTool,
+      gstack_guard: guardTool,
     }
-  }
 
-  return { tool: tools }
+    const skills = [
+      { name: "gstack/office-hours", description: "Product framing with 6 questions", content: skillTemplates["office-hours"] },
+      { name: "gstack/plan-ceo-review", description: "CEO-level product scope review", content: skillTemplates["plan-ceo-review"] },
+      { name: "gstack/plan-eng-review", description: "Engineering architecture review", content: skillTemplates["plan-eng-review"] },
+      { name: "gstack/plan-design-review", description: "Design UX audit", content: skillTemplates["plan-design-review"] },
+      { name: "gstack/design-consultation", description: "Design system and mockups", content: skillTemplates["design-consultation"] },
+      { name: "gstack/design-shotgun", description: "Multiple design variants", content: skillTemplates["design-shotgun"] },
+      { name: "gstack/design-html", description: "Production HTML layouts", content: skillTemplates["design-html"] },
+      { name: "gstack/review", description: "Staff engineer code review", content: skillTemplates["review"] },
+      { name: "gstack/investigate", description: "Debugging and root cause analysis", content: skillTemplates["investigate"] },
+      { name: "gstack/qa", description: "Automated browser testing", content: skillTemplates["qa"] },
+      { name: "gstack/cso", description: "Security audit (OWASP/STRIDE)", content: skillTemplates["cso"] },
+      { name: "gstack/ship", description: "Release engineering and PR", content: skillTemplates["ship"] },
+      { name: "gstack/land-and-deploy", description: "Production deploy and verify", content: skillTemplates["land-and-deploy"] },
+      { name: "gstack/canary", description: "Post-deploy monitoring", content: skillTemplates["canary"] },
+      { name: "gstack/benchmark", description: "Performance testing", content: skillTemplates["benchmark"] },
+      { name: "gstack/document-release", description: "Documentation update", content: skillTemplates["document-release"] },
+      { name: "gstack/retro", description: "Team retrospective", content: skillTemplates["retro"] },
+    ]
+
+    for (const skill of skills) {
+      try {
+        await registerSkill(skill)
+      } catch (e) {
+        client.app.log({
+          body: {
+            service: "gstack",
+            level: "warn",
+            message: `Failed to register skill ${skill.name}: ${String(e)}`,
+          },
+        })
+      }
+    }
+
+    return { tool: tools }
+  },
 }
 
-export default GStackPlugin
+export default plugin

@@ -1,4 +1,4 @@
-import type { Plugin, Hooks } from "sjz-opencode-sdk"
+import type { PluginModule } from "sjz-opencode-plugin"
 import { existsSync, readdirSync, statSync, readFileSync } from "fs"
 import { join } from "path"
 import { execSync } from "child_process"
@@ -12,7 +12,6 @@ const loadFileContent = (filePath: string): string | null => {
       return readFileSync(filePath, "utf-8")
     }
   } catch (e) {
-    // ignore
   }
   return null
 }
@@ -42,7 +41,6 @@ const parseFrontmatter = (content: string): { frontmatter: Frontmatter; body: st
       const rest = line.slice(colonIdx + 1).trim()
 
       if (rest === "|") {
-        // YAML block scalar — collect following indented lines into a single string
         const blockLines: string[] = []
         i++
         while (i < lines.length && (lines[i].startsWith(" ") || lines[i] === "")) {
@@ -100,90 +98,89 @@ const cloneSuperpowers = (): void => {
   })
 }
 
-export const SuperpowerPlugin: Plugin = async ({
-  registerSkill,
-  registerCommand,
-}: any): Promise<Hooks> => {
-  if (!existsSync(GLOBAL_SUPERPOWERS_DIR)) {
-    try {
-      cloneSuperpowers()
-    } catch (e) {
-      return {}
-    }
-  }
-
-  const agents = loadAgents()
-
-  const skillsDir = join(GLOBAL_SUPERPOWERS_DIR, "skills")
-  if (existsSync(skillsDir)) {
-    try {
-      const skills = readdirSync(skillsDir)
-      for (const skillName of skills) {
-        const skillPath = join(skillsDir, skillName)
-        if (!statSync(skillPath).isDirectory()) continue
-
-        const rawContent = loadFileContent(join(skillPath, "SKILL.md"))
-        if (!rawContent) continue
-
-        const { frontmatter } = parseFrontmatter(rawContent)
-        const description = frontmatter.description || skillName
-
-        try {
-          await registerSkill({
-            name: `superpowers/${skillName}`,
-            description,
-            content: rawContent,
-          })
-        } catch (e) {
-          // ignore
-        }
+const plugin: PluginModule = {
+  id: "superpower",
+  async server({ registerSkill, registerCommand }) {
+    if (!existsSync(GLOBAL_SUPERPOWERS_DIR)) {
+      try {
+        cloneSuperpowers()
+      } catch (e) {
+        return {}
       }
-    } catch (e) {
-      // ignore
     }
-  }
 
-  const commandsDir = join(GLOBAL_SUPERPOWERS_DIR, "commands")
-  if (existsSync(commandsDir)) {
-    try {
-      const commands = readdirSync(commandsDir)
-      for (const cmdFile of commands) {
-        if (!cmdFile.endsWith(".md")) continue
+    const agents = loadAgents()
 
-        const cmdPath = join(commandsDir, cmdFile)
-        const rawContent = loadFileContent(cmdPath)
-        if (!rawContent) continue
+    const skillsDir = join(GLOBAL_SUPERPOWERS_DIR, "skills")
+    if (existsSync(skillsDir)) {
+      try {
+        const skills = readdirSync(skillsDir)
+        for (const skillName of skills) {
+          const skillPath = join(skillsDir, skillName)
+          if (!statSync(skillPath).isDirectory()) continue
 
-        const { frontmatter, body } = parseFrontmatter(rawContent)
-        const commandName = frontmatter.name || cmdFile.replace(".md", "")
-        const description = frontmatter.description || commandName
+          const rawContent = loadFileContent(join(skillPath, "SKILL.md"))
+          if (!rawContent) continue
 
-        try {
-          await registerCommand({
-            name: commandName,
-            description,
-            template: body.trim(),
-          })
-        } catch (e) {
-          // ignore
+          const { frontmatter } = parseFrontmatter(rawContent)
+          const description = frontmatter.description || skillName
+
+          try {
+            await registerSkill({
+              name: `superpowers/${skillName}`,
+              description,
+              content: rawContent,
+            })
+          } catch (e) {
+          }
         }
+      } catch (e) {
       }
-    } catch (e) {
-      // ignore
     }
-  }
 
-  return {
-    config: async (openCodeConfig) => {
-      const cfg = openCodeConfig as any
-      if (!cfg.agent) cfg.agent = {}
-      for (const agent of agents) {
-        cfg.agent[agent.name] = {
-          description: agent.description,
-          mode: agent.mode,
-          prompt: agent.prompt,
+    const commandsDir = join(GLOBAL_SUPERPOWERS_DIR, "commands")
+    if (existsSync(commandsDir)) {
+      try {
+        const commands = readdirSync(commandsDir)
+        for (const cmdFile of commands) {
+          if (!cmdFile.endsWith(".md")) continue
+
+          const cmdPath = join(commandsDir, cmdFile)
+          const rawContent = loadFileContent(cmdPath)
+          if (!rawContent) continue
+
+          const { frontmatter, body } = parseFrontmatter(rawContent)
+          const commandName = frontmatter.name || cmdFile.replace(".md", "")
+          const description = frontmatter.description || commandName
+
+          try {
+            await registerCommand({
+              name: commandName,
+              description,
+              agent: commandName,
+              template: body.trim(),
+            })
+          } catch (e) {
+          }
         }
+      } catch (e) {
       }
-    },
-  }
+    }
+
+    return {
+      config: async (openCodeConfig) => {
+        const cfg = openCodeConfig as any
+        if (!cfg.agent) cfg.agent = {}
+        for (const agent of agents) {
+          cfg.agent[agent.name] = {
+            description: agent.description,
+            mode: agent.mode,
+            prompt: agent.prompt,
+          }
+        }
+      },
+    }
+  },
 }
+
+export default plugin
