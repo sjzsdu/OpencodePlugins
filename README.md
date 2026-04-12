@@ -193,27 +193,32 @@ bun test
 
 ## Publishing
 
-Each plugin is published independently to npm via git tags:
+Each plugin is published automatically to npm when changes are pushed to the `main` branch. The workflow detects which plugins have changed and publishes them with auto-incremented version numbers.
 
-```bash
-# Commander
-git tag commander-v0.1.0 && git push --tags
+### Configuration
 
-# Emperor
-git tag emperor-v0.5.1 && git push --tags
+Plugin publishing is configured in `publish.config.json`:
 
-# Hive
-git tag hive-v0.1.0 && git push --tags
-
-# Superpower
-git tag superpower-v0.1.0 && git push --tags
-
-# Stock
-git tag stock-v0.1.0 && git push --tags
-
-# Triage
-git tag triage-v0.1.0 && git push --tags
+```json
+{
+  "$schema": "./schemas/publish.config.json",
+  "plugins": {
+    "commander": { "name": "opencode-plugin-commander", "path": "plugins/commander" },
+    "emperor": { "name": "opencode-plugin-emperor", "path": "plugins/emperor" },
+    ...
+  },
+  "publish": { "autoBumpVersion": true, "versionBumpType": "patch" }
+}
 ```
+
+To add a new plugin:
+1. Add the plugin directory under `plugins/`
+2. Add its config to `publish.config.json`
+3. Push to main — it will be auto-published
+
+### Manual Trigger
+
+You can also manually trigger a publish via GitHub Actions workflow dispatch.
 
 | Package | npm |
 |---------|-----|

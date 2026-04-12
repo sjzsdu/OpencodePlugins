@@ -150,7 +150,7 @@ Jira Ticket → Triage（分类）→ Scout（探索）→ [Detective（Bug 调�
 ├── .hive/                               # Hive 运行时数据（events.json, domains.json）
 └── .github/workflows/
     ├── ci.yml                           # 类型检查 + 测试
-    └── npm-publish.yml                  # 基于 Tag 的选择性发布
+    └── npm-publish.yml                  # 自动发布
 ```
 
 ## 开发
@@ -168,27 +168,32 @@ bun test
 
 ## 发布
 
-每个插件通过 git tag 独立发布到 npm：
+每个插件在推送到 `main` 分支时会自动发布到 npm。workflow 会检测哪些插件有变动，然后自动增量版本号发布。
 
-```bash
-# Commander
-git tag commander-v0.1.0 && git push --tags
+### 配置
 
-# Emperor
-git tag emperor-v0.5.1 && git push --tags
+插件发布在 `publish.config.json` 中配置：
 
-# Hive
-git tag hive-v0.1.0 && git push --tags
-
-# Superpower
-git tag superpower-v0.1.0 && git push --tags
-
-# Stock
-git tag stock-v0.1.0 && git push --tags
-
-# Triage
-git tag triage-v0.1.0 && git push --tags
+```json
+{
+  "$schema": "./schemas/publish.config.json",
+  "plugins": {
+    "commander": { "name": "opencode-plugin-commander", "path": "plugins/commander" },
+    "emperor": { "name": "opencode-plugin-emperor", "path": "plugins/emperor" },
+    ...
+  },
+  "publish": { "autoBumpVersion": true, "versionBumpType": "patch" }
+}
 ```
+
+新增插件：
+1. 在 `plugins/` 下添加插件目录
+2. 在 `publish.config.json` 中添加配置
+3. 推送到 main — 会自动发布
+
+### 手动触发
+
+也可以通过 GitHub Actions workflow dispatch 手动触发发布。
 
 | 包名 | 说明 |
 |------|------|

@@ -1,25 +1,92 @@
-name: Publish to npm
+name: Publish Plugins to npm
 
 on:
   push:
-    tags:
-      - 'emperor-v*'
-      - 'commander-v*'
-      - 'hive-v*'
-      - 'superpower-v*'
-      - 'stock-v*'
-      - 'triage-v*'
+    branches:
+      - main
+    paths:
+      - 'plugins/**'
+      - 'publish.config.json'
+  workflow_dispatch:
+    inputs:
+      plugin:
+        description: 'Plugin to publish (leave empty to publish all changed)'
+        required: false
+        type: string
 
 jobs:
-  publish:
+  detect-changes:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-
+    outputs:
+      changed_plugins: ${{ steps.detect.outputs.changed_plugins }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed plugins
+        id: detect
+        shell: bash
+        run: |
+          set -eo pipefail
+          
+          # Read publish.config.json to get plugin list
+          PLUGINS=$(node -p "const c=require('./publish.config.json');Object.keys(c.plugins).join(',')")
+          echo "Configured plugins: $PLUGINS"
+          
+          # Get base commit - use parent of current commit
+          if git rev-parse --verify HEAD^ &>/dev/null; then
+            BASE_COMMIT=HEAD^
+          else
+            # First commit - use current commit as base (no changes detected)
+            BASE_COMMIT=HEAD
+          fi
+          echo "Base commit: $BASE_COMMIT"
+          
+          # Get list of changed files since base
+          CHANGED_FILES=$(git diff --name-only $BASE_COMMIT HEAD -- plugins/ 2>/dev/null || echo "")
+          echo "Changed files: $CHANGED_FILES"
+          
+          # Find which plugins have changes
+          CHANGED_PLUGINS=""
+          for plugin in $(echo "$PLUGINS" | tr ',' ' '); do
+            if echo "$CHANGED_FILES" | grep -q "plugins/$plugin/"; then
+              if [ -z "$CHANGED_PLUGINS" ]; then
+                CHANGED_PLUGINS="$plugin"
+              else
+                CHANGED_PLUGINS="$CHANGED_PLUGINS,$plugin"
+              fi
+            fi
+          done
+          
+          # Check for manual trigger
+          if [ -n "${{ github.event.inputs.plugin }}" ]; then
+            CHANGED_PLUGINS="${{ github.event.inputs.plugin }}"
+          fi
+          
+          if [ -z "$CHANGED_PLUGINS" ]; then
+            echo "changed_plugins=none" >> $GITHUB_OUTPUT
+            echo "No plugin changes detected"
+          else
+            echo "changed_plugins=$CHANGED_PLUGINS" >> $GITHUB_OUTPUT
+            echo "Changed plugins: $CHANGED_PLUGINS"
+          fi
+
+  publish:
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    if: needs.detect-changes.outputs.changed_plugins != 'none'
+    permissions:
+      contents: write
+      id-token: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -32,53 +99,52 @@ jobs:
       - name: Type check
         run: bun run build
 
-      - name: Determine plugin from tag
-        id: plugin
+      - name: Publish each changed plugin
         run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          if [[ "$TAG" == emperor-v* ]]; then
-            echo "dir=plugins/emperor" >> $GITHUB_OUTPUT
-            echo "name=emperor" >> $GITHUB_OUTPUT
-            echo "version=${TAG#emperor-v}" >> $GITHUB_OUTPUT
-          elif [[ "$TAG" == commander-v* ]]; then
-            echo "dir=plugins/commander" >> $GITHUB_OUTPUT
-            echo "name=commander" >> $GITHUB_OUTPUT
-            echo "version=${TAG#commander-v}" >> $GITHUB_OUTPUT
-          elif [[ "$TAG" == hive-v* ]]; then
-            echo "dir=plugins/hive" >> $GITHUB_OUTPUT
-            echo "name=hive" >> $GITHUB_OUTPUT
-            echo "version=${TAG#hive-v}" >> $GITHUB_OUTPUT
-          elif [[ "$TAG" == superpower-v* ]]; then
-            echo "dir=plugins/superpower" >> $GITHUB_OUTPUT
-            echo "name=superpower" >> $GITHUB_OUTPUT
-            echo "version=${TAG#superpower-v}" >> $GITHUB_OUTPUT
-          elif [[ "$TAG" == stock-v* ]]; then
-            echo "dir=plugins/stock" >> $GITHUB_OUTPUT
-            echo "name=stock" >> $GITHUB_OUTPUT
-            echo "version=${TAG#stock-v}" >> $GITHUB_OUTPUT
-          elif [[ "$TAG" == triage-v* ]]; then
-            echo "dir=plugins/triage" >> $GITHUB_OUTPUT
-            echo "name=triage" >> $GITHUB_OUTPUT
-            echo "version=${TAG#triage-v}" >> $GITHUB_OUTPUT
-          else
-            echo "::error::Unknown tag pattern: $TAG"
-            exit 1
-          fi
+          CHANGED="${{ needs.detect-changes.outputs.changed_plugins }}"
+          
+          echo "Publishing plugins: $CHANGED"
+          
+          for plugin in $(echo "$CHANGED" | tr ',' ' '); do
+            echo "=== Publishing $plugin ==="
+            
+            PLUGIN_PATH=$(node -p "require('./publish.config.json').plugins['$plugin'].path")
+            
+            # Get current version
+            CURRENT=$(node -p "require('./$PLUGIN_PATH/package.json').version")
+            echo "Current version: $CURRENT"
+            
+            # Bump version
+            NEW=$(node -p "const v='$CURRENT'.split('.');v[2]=(parseInt(v[2])+1).toString();console.log(v.join('.'))")
+            echo "New version: $NEW"
+            
+            # Update package.json
+            node -p "const p=require('./$PLUGIN_PATH/package.json');p.version='$NEW';JSON.stringify(p,null,2)" > "$PLUGIN_PATH/package.json"
+            
+            # Commit version bump
+            git config --local user.email "github-actions[bot]@users.noreply.github.com"
+            git config --local user.name "github-actions[bot]"
+            git add "$PLUGIN_PATH/package.json"
+            git commit -m "chore: $plugin v$NEW" || exit 0
+            git push
+            
+            # Create & push tag
+            git tag "$plugin-v$NEW"
+            git push origin "$plugin-v$NEW"
+            
+            # Publish to npm
+            cd "$PLUGIN_PATH"
+            echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
+            npm config set provenance true
+            npm publish --access public
+            cd ..
+            
+            echo "✅ Published $plugin v$NEW"
+          done
 
-      - name: Verify version matches package.json
-        working-directory: ${{ steps.plugin.outputs.dir }}
-        run: |
-          PKG_VERSION=$(node -p "require('./package.json').version")
-          TAG_VERSION="${{ steps.plugin.outputs.version }}"
-          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
-            echo "::error::Tag version ($TAG_VERSION) does not match package.json version ($PKG_VERSION)"
-            exit 1
-          fi
-          echo "✅ Version match: $PKG_VERSION"
-
-      - name: Publish ${{ steps.plugin.outputs.name }}
-        working-directory: ${{ steps.plugin.outputs.dir }}
-        run: |
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
-          npm config set provenance true
-          npm publish --access public
+  no-changes:
+    runs-on: ubuntu-latest
+    if: needs.detect-changes.outputs.changed_plugins == 'none'
+    steps:
+      - name: No changes
+        run: echo "No plugin changes detected, skipping publish"

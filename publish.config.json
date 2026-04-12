@@ -1,0 +1,46 @@
+{
+  "$schema": "./schemas/publish.config.json",
+  "description": "OpenCode Plugins 发布配置",
+  "plugins": {
+    "commander": {
+      "name": "opencode-plugin-commander",
+      "path": "plugins/commander"
+    },
+    "emperor": {
+      "name": "opencode-plugin-emperor",
+      "path": "plugins/emperor"
+    },
+    "hive": {
+      "name": "opencode-plugin-hive",
+      "path": "plugins/hive"
+    },
+    "superpower": {
+      "name": "opencode-plugin-superpower",
+      "path": "plugins/superpower"
+    },
+    "stock": {
+      "name": "opencode-plugin-stock",
+      "path": "plugins/stock"
+    },
+    "triage": {
+      "name": "opencode-plugin-triage",
+      "path": "plugins/triage"
+    },
+    "code-context": {
+      "name": "opencode-plugin-code-context",
+      "path": "plugins/code-context"
+    },
+    "docs": {
+      "name": "opencode-plugin-docs",
+      "path": "plugins/docs"
+    },
+    "gstack": {
+      "name": "opencode-plugin-gstack",
+      "path": "plugins/gstack"
+    }
+  },
+  "publish": {
+    "autoBumpVersion": true,
+    "versionBumpType": "patch"
+  }
+}

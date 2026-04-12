@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "OpenCode Plugins Publish Configuration",
+  "type": "object",
+  "required": ["plugins"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Schema reference"
+    },
+    "description": {
+      "type": "string",
+      "description": "Configuration description"
+    },
+    "plugins": {
+      "type": "object",
+      "description": "Plugin definitions",
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": {
+          "type": "object",
+          "required": ["name", "path"],
+          "properties": {
+            "name": {
+              "type": "string",
+              "pattern": "^opencode-plugin-[a-z][a-z0-9-]*$",
+              "description": "npm package name"
+            },
+            "path": {
+              "type": "string",
+              "pattern": "^plugins/[a-z][a-z0-9-]*$",
+              "description": "Relative path to plugin directory"
+            }
+          }
+        }
+      }
+    },
+    "publish": {
+      "type": "object",
+      "properties": {
+        "autoBumpVersion": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically bump version on publish"
+        },
+        "versionBumpType": {
+          "type": "string",
+          "enum": ["major", "minor", "patch"],
+          "default": "patch",
+          "description": "Version bump type when autoBumpVersion is true"
+        }
+      }
+    }
+  }
+}
