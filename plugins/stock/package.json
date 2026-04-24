@@ -1,7 +1,7 @@
 {
   "name": "opencode-plugin-stock",
   "version": "0.1.0",
-  "description": "Stock — A股多维度分析评分插件，5个专业Agent并发分析+HTML报告生成",
+  "description": "Stock — 单入口 A 股分析插件，动态维度路由 + 概率化投资分析 + HTML 报告生成",
   "main": "index.ts",
   "types": "index.ts",
   "type": "module",
@@ -21,7 +21,9 @@
     "stock",
     "a-share",
     "stock-analysis",
-    "multi-agent",
+    "single-entry",
+    "html-report",
+    "investment-analysis",
     "tongstock"
   ],
   "repository": {

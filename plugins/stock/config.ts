@@ -3,7 +3,6 @@ import { join } from "node:path"
 import type { AgentConfig } from "sjz-opencode-sdk"
 import type { AnalystConfig, AnalystUserConfig, WeightConfig, WeightPreset } from "./types"
 import { AGENTS_GENERAL } from "./agents-general"
-import { AGENTS_TECHNICAL } from "./agents-technical"
 
 /** 预设权重方案 */
 const WEIGHT_PRESETS: Record<WeightPreset, WeightConfig> = {
@@ -53,12 +52,7 @@ export function loadConfig(directory: string): AnalystConfig {
     const userModel = userConfig.agents?.[id]?.model
     agents[id] = userModel ? { ...agentDef, model: userModel } : { ...agentDef }
   }
-  for (const [id, agentDef] of Object.entries(AGENTS_TECHNICAL)) {
-    const userModel = userConfig.agents?.[id]?.model
-    agents[id] = userModel ? { ...agentDef, model: userModel } : { ...agentDef }
-  }
 
-  // 解析权重配置
   let weights: WeightConfig
   if (typeof userConfig.weights === "string") {
     weights = WEIGHT_PRESETS[userConfig.weights] ?? WEIGHT_PRESETS.balanced

@@ -52,22 +52,13 @@ const plugin: PluginModule = {
 
     syncTongstockRepo()
 
-    client.app.log({ body: { service: "stock", level: "info", message: "📊 Stock Analyst plugin initialized" } })
+    client.app.log({ body: { service: "stock", level: "info", message: "📊 Stock plugin initialized" } })
 
     await registerCommand({
-      name: "stock-general",
-      description:
-        "综合分析A股股票 - 5维度深度分析 → 输出 HTML 报告（.stock/reports/日期/代码.html）",
-      agent: "coordinator",
-      template: `@stock-general $ARGUMENTS`,
-    })
-
-    await registerCommand({
-      name: "stock-tech",
-      description:
-        "技术分析A股股票 - 纯技术指标 → 输出 HTML 报告（.stock/reports/日期/代码-tech.html）",
-      agent: "coordinator",
-      template: `@stock-tech $ARGUMENTS`,
+      name: "stock",
+      description: "单入口 A 股分析 - 按输入动态选择维度并统一生成 HTML 报告",
+      agent: "stock",
+      template: `@stock $ARGUMENTS`,
     })
 
     const skills = [
