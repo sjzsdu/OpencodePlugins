@@ -75,7 +75,7 @@ function runCodeContextIndex(directory: string, logger: ReturnType<typeof create
 const plugin: PluginModule = {
   id: "code-context",
   async server({ client, directory, registerSkill, registerCommand, registerAgent }) {
-    const logger = createPluginLogger("code-context", client.app.log)
+    const logger = createPluginLogger("code-context", client.app.log.bind(client.app))
 
     logger("info", "Code Context plugin initialized")
 
