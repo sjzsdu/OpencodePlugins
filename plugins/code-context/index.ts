@@ -1,166 +1,123 @@
 import type { PluginModule } from "sjz-opencode-plugin"
-import { existsSync, readFileSync } from "node:fs"
-import { join } from "node:path"
 import { execSync } from "node:child_process"
+import { join } from "node:path"
+import { createPluginLogger, findBinary, loadRemoteSkillContent, scheduleBackgroundTask, syncRemoteRepo } from "../shared/runtime"
 
 const CODE_CONTEXT_GITHUB = "https://github.com/sjzsdu/code-context.git"
 const GLOBAL_CODE_CONTEXT_DIR = join(process.env.HOME || "", ".code-context")
+const CODE_CONTEXT_GO_INSTALL_TARGET = "github.com/sjzsdu/code-context/cmd/code-context@latest"
+const CODE_CONTEXT_AGENT_NAME = "code-context-explorer"
+const CODE_CONTEXT_COMMAND_NAME = "code-context"
+const CODE_CONTEXT_AGENT_DESCRIPTION = "Explore and interpret the current project primarily through code-context CLI outputs, with emphasis on project structure and symbol understanding"
 
-function loadSkillContent(name: string, pluginDir: string): string | null {
-  const remotePath = join(GLOBAL_CODE_CONTEXT_DIR, "skills", name, "SKILL.md")
-  if (existsSync(remotePath)) {
-    try {
-      return readFileSync(remotePath, "utf-8")
-    } catch {}
-  }
-
-  const bundledPath = join(pluginDir, "skills", `${name}.md`)
-  if (existsSync(bundledPath)) {
-    try {
-      return readFileSync(bundledPath, "utf-8")
-    } catch {}
-  }
-
-  return null
+function getCodeContextBin(logger: ReturnType<typeof createPluginLogger>): string | null {
+  return findBinary("code-context", [
+    join(GLOBAL_CODE_CONTEXT_DIR, "code-context"),
+    join(process.env.GOPATH || join(process.env.HOME || "", "go"), "bin", "code-context"),
+  ], logger)
 }
 
-function getCodeContextBin(): string | null {
-  const pathBin = execSync("which code-context", { encoding: "utf-8" }).trim()
-  if (pathBin && existsSync(pathBin)) {
-    return pathBin
-  }
-
-  const localBin = join(GLOBAL_CODE_CONTEXT_DIR, "code-context")
-  if (existsSync(localBin)) {
-    return localBin
-  }
-
-  const gopathBin = join(process.env.GOPATH || join(process.env.HOME || "", "go"), "bin", "code-context")
-  if (existsSync(gopathBin)) {
-    return gopathBin
-  }
-
-  return null
-}
-
-function ensureCodeContextBuilt(): void {
-  const existingBin = getCodeContextBin()
+function ensureCodeContextBuilt(logger: ReturnType<typeof createPluginLogger>): string | null {
+  const existingBin = getCodeContextBin(logger)
   if (existingBin) {
-    return
+    return existingBin
   }
 
-  setImmediate(() => {
-    try {
-      execSync(`go install github.com/sjzsdu/code-context/cmd/code-context@latest`, {
-        stdio: "inherit",
-        timeout: 300_000,
-      })
-    } catch {
-      try {
-        const binPath = join(GLOBAL_CODE_CONTEXT_DIR, "code-context")
-        execSync(`go build -o "${binPath}" ./cmd/code-context`, {
-          cwd: GLOBAL_CODE_CONTEXT_DIR,
-          stdio: "inherit",
-          timeout: 300_000,
-        })
-      } catch (e) {
-        console.error("[code-context] Failed to build code-context:", e)
-      }
-    }
-  })
+  try {
+    logger("info", `Installing code-context via go install ${CODE_CONTEXT_GO_INSTALL_TARGET}`)
+    execSync(`go install ${CODE_CONTEXT_GO_INSTALL_TARGET}`, {
+      stdio: "ignore",
+      timeout: 300_000,
+    })
+    return getCodeContextBin(logger)
+  } catch (installError) {
+    logger("warn", `go install failed, falling back to local build: ${String(installError)}`)
+  }
+
+  if (!syncRemoteRepo({ repoUrl: CODE_CONTEXT_GITHUB, globalDir: GLOBAL_CODE_CONTEXT_DIR, logger })) {
+    return null
+  }
+
+  try {
+    const binPath = join(GLOBAL_CODE_CONTEXT_DIR, "code-context")
+    logger("info", `Building code-context binary into ${binPath}`)
+    execSync(`go build -o "${binPath}" ./cmd/code-context`, {
+      cwd: GLOBAL_CODE_CONTEXT_DIR,
+      stdio: "ignore",
+      timeout: 300_000,
+    })
+    return binPath
+  } catch (buildError) {
+    logger("error", `Failed to build code-context locally: ${String(buildError)}`)
+    return null
+  }
 }
 
-function syncCodeContextRepo(): void {
-  setImmediate(() => {
-    try {
-      if (!existsSync(GLOBAL_CODE_CONTEXT_DIR)) {
-        execSync(`git clone "${CODE_CONTEXT_GITHUB}" "${GLOBAL_CODE_CONTEXT_DIR}"`, {
-          stdio: "ignore",
-          timeout: 120_000,
-        })
-      } else if (existsSync(join(GLOBAL_CODE_CONTEXT_DIR, ".git"))) {
-        execSync("git pull --ff-only", {
-          cwd: GLOBAL_CODE_CONTEXT_DIR,
-          stdio: "ignore",
-          timeout: 30_000,
-        })
-      }
-    } catch {}
-  })
-}
-
-function autoIndexCodebase(directory: string): void {
-  const bin = getCodeContextBin()
+function runCodeContextIndex(directory: string, logger: ReturnType<typeof createPluginLogger>): void {
+  const bin = ensureCodeContextBuilt(logger)
   if (!bin) {
-    ensureCodeContextBuilt()
+    logger("warn", "Skipping automatic indexing because code-context binary is unavailable")
     return
   }
 
-  setImmediate(() => {
-    try {
-      execSync(`"${bin}" index`, {
-        cwd: directory,
-        stdio: "ignore",
-        timeout: 300_000,
-      })
-    } catch {}
-  })
+  try {
+    logger("info", `Indexing workspace in ${directory}`)
+    execSync(`"${bin}" index`, {
+      cwd: directory,
+      stdio: "ignore",
+      timeout: 300_000,
+    })
+  } catch (error) {
+    logger("error", `Workspace indexing failed for ${directory}: ${String(error)}`)
+  }
 }
 
 const plugin: PluginModule = {
   id: "code-context",
   async server({ client, directory, registerSkill, registerCommand, registerAgent }) {
-    const pluginDir = import.meta.dir
+    const logger = createPluginLogger("code-context", client.app.log)
 
-    syncCodeContextRepo()
-    ensureCodeContextBuilt()
+    logger("info", "Code Context plugin initialized")
 
-    client.app.log({ body: { service: "code-context", level: "info", message: "🔍 Code Context plugin initialized" } })
-
-    autoIndexCodebase(directory)
+    scheduleBackgroundTask("code-context setup", () => {
+      const synced = syncRemoteRepo({ repoUrl: CODE_CONTEXT_GITHUB, globalDir: GLOBAL_CODE_CONTEXT_DIR, logger })
+      if (!synced) {
+        logger("warn", "Repository sync was skipped or failed; continuing with available local assets")
+      }
+      runCodeContextIndex(directory, logger)
+    }, logger)
 
     await registerAgent({
-      name: "code-analyzer",
-      description: "Code analysis agent using code-context for structural indexing, symbol search, definition lookup, impact analysis",
+      name: CODE_CONTEXT_AGENT_NAME,
+      description: CODE_CONTEXT_AGENT_DESCRIPTION,
       mode: "subagent",
       options: {},
     })
 
     await registerCommand({
-      name: "code-analyze",
-      description: "Analyze code structure and generate context for a feature/topic",
-      agent: "code-analyzer",
-      template: `Analyze the codebase for topic: $ARGUMENTS
-Use the code-context skill with:
-1. "search" to find related symbols
-2. "snapshot" to generate LLM context  
-3. "map" to show project structure`,
+      name: CODE_CONTEXT_COMMAND_NAME,
+      description: "Explore the current project through code-context CLI material and interpret its symbols and structure",
+      agent: CODE_CONTEXT_AGENT_NAME,
+      template: `Explore the current project with the topic or question: $ARGUMENTS
+Your primary source of truth must be the code-context CLI output for this workspace.
+Focus on understanding and explaining the project by using code-context commands such as:
+- "map" for project structure
+- "search" for relevant symbols
+- "find-def" for definitions
+- "references" for symbol usage
+- "context" for symbol profiles
+- "explain" for file-level interpretation
+- "trace" for call-chain understanding
+- "snapshot" when a compact LLM context bundle helps
+Explain the project and its symbols mainly from the evidence provided by these commands, and only use direct file reading when the CLI output clearly requires clarification.`,
     })
 
-    await registerCommand({
-      name: "code-impact",
-      description: "Analyze change impact - what files might break if you modify a file",
-      agent: "code-analyzer",
-      template: `Analyze change impact for: $ARGUMENTS
-Use code-context skill with "diff_impact" to find:
-- Dependencies
-- Dependent files
-- Recommended test files`,
+    const content = loadRemoteSkillContent({
+      globalDir: GLOBAL_CODE_CONTEXT_DIR,
+      skillName: "code-context",
+      logger,
     })
 
-    await registerCommand({
-      name: "code-explore",
-      description: "Explore code - find definitions, references, understand code flow",
-      agent: "code-analyzer",
-      template: `Explore code for: $ARGUMENTS
-Use code-context skill with:
-1. "find_def" to find definition
-2. "find_refs" to find all references
-3. "context" for symbol profile
-4. "trace" to trace call chains`,
-    })
-
-    const content = loadSkillContent("code-context", pluginDir)
     if (content) {
       try {
         await registerSkill({
@@ -168,8 +125,8 @@ Use code-context skill with:
           description: "Code context system for AI agents - structural indexing, symbol search, definition lookup, impact analysis",
           content,
         })
-      } catch (e) {
-        console.error("[code-context] Failed to register code-context skill:", e)
+      } catch (error) {
+        logger("error", `Failed to register code-context skill: ${String(error)}`)
       }
     }
 
@@ -179,8 +136,8 @@ Use code-context skill with:
         if (!configAny.agent) {
           configAny.agent = {}
         }
-        configAny.agent["code-analyzer"] = {
-          description: "Code analysis agent using code-context for structural indexing, symbol search, definition lookup, impact analysis",
+        configAny.agent[CODE_CONTEXT_AGENT_NAME] = {
+          description: CODE_CONTEXT_AGENT_DESCRIPTION,
           mode: "subagent",
           options: {},
         }

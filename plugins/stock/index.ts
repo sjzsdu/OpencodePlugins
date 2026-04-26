@@ -1,58 +1,23 @@
 import type { PluginModule } from "sjz-opencode-plugin"
-import { existsSync, readFileSync } from "node:fs"
+import { createPluginLogger, loadSkillContent, scheduleBackgroundTask, syncRemoteRepo } from "../shared/runtime"
 import { join } from "node:path"
-import { execSync } from "node:child_process"
 import { loadConfig } from "./config"
 
 const TONGSTOCK_GITHUB = "https://github.com/sjzsdu/tongstock.git"
 const GLOBAL_TONGSTOCK_DIR = join(process.env.HOME || "", ".tongstock")
-
-function loadSkillContent(name: string, pluginDir: string): string | null {
-  const remotePath = join(GLOBAL_TONGSTOCK_DIR, "skills", name, "SKILL.md")
-  if (existsSync(remotePath)) {
-    try {
-      return readFileSync(remotePath, "utf-8")
-    } catch {}
-  }
-
-  const bundledPath = join(pluginDir, "skills", `${name}.md`)
-  if (existsSync(bundledPath)) {
-    try {
-      return readFileSync(bundledPath, "utf-8")
-    } catch {}
-  }
-
-  return null
-}
-
-function syncTongstockRepo(): void {
-  setImmediate(() => {
-    try {
-      if (!existsSync(GLOBAL_TONGSTOCK_DIR)) {
-        execSync(`git clone "${TONGSTOCK_GITHUB}" "${GLOBAL_TONGSTOCK_DIR}"`, {
-          stdio: "ignore",
-          timeout: 120_000,
-        })
-      } else if (existsSync(join(GLOBAL_TONGSTOCK_DIR, ".git"))) {
-        execSync("git pull --ff-only", {
-          cwd: GLOBAL_TONGSTOCK_DIR,
-          stdio: "ignore",
-          timeout: 30_000,
-        })
-      }
-    } catch {}
-  })
-}
 
 const plugin: PluginModule = {
   id: "stock",
   async server({ client, directory, registerSkill, registerCommand }) {
     const config = loadConfig(directory)
     const pluginDir = import.meta.dir
+    const logger = createPluginLogger("stock", client.app.log)
 
-    syncTongstockRepo()
+    scheduleBackgroundTask("tongstock sync", () => {
+      syncRemoteRepo({ repoUrl: TONGSTOCK_GITHUB, globalDir: GLOBAL_TONGSTOCK_DIR, logger })
+    }, logger)
 
-    client.app.log({ body: { service: "stock", level: "info", message: "📊 Stock plugin initialized" } })
+    logger("info", "Stock plugin initialized")
 
     await registerCommand({
       name: "stock",
@@ -67,12 +32,17 @@ const plugin: PluginModule = {
     ]
 
     for (const skill of skills) {
-      const content = loadSkillContent(skill.name, pluginDir)
+      const content = loadSkillContent({
+        globalDir: GLOBAL_TONGSTOCK_DIR,
+        pluginDir,
+        skillName: skill.name,
+        logger,
+      })
       if (content) {
         try {
           await registerSkill({ name: skill.name, description: skill.description, content })
-        } catch (e) {
-          console.error(`[stock] Failed to register ${skill.name} skill:`, e)
+        } catch (error) {
+          logger("error", `Failed to register ${skill.name} skill: ${String(error)}`)
         }
       }
     }
@@ -92,3 +62,4 @@ const plugin: PluginModule = {
 }
 
 export default plugin
+

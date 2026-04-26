@@ -9,11 +9,10 @@
     ".": "./index.ts"
   },
   "files": [
-    "**/*.ts",
-    "skills/**/*"
+    "**/*.ts"
   ],
   "peerDependencies": {
-    "@opencode-ai/plugin": ">=1.2.0"
+    "sjz-opencode-plugin": ">=1.2.0"
   },
   "keywords": [
     "opencode",
