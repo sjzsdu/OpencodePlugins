@@ -13,6 +13,11 @@ on:
         description: 'Plugin to publish (leave empty to publish all changed)'
         required: false
         type: string
+      force:
+        description: 'Force publish even when no plugin files changed'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   detect-changes:
@@ -35,8 +40,10 @@ jobs:
           PLUGINS=$(node -p "const c=require('./publish.config.json');Object.keys(c.plugins).join(',')")
           echo "Configured plugins: $PLUGINS"
           
-          # Get base commit - use parent of current commit
-          if git rev-parse --verify HEAD^ &>/dev/null; then
+          # Get base commit for this push
+          if [ "${{ github.event_name }}" = "push" ] && [ -n "${{ github.event.before }}" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            BASE_COMMIT="${{ github.event.before }}"
+          elif git rev-parse --verify HEAD^ &>/dev/null; then
             BASE_COMMIT=HEAD^
           else
             # First commit - use current commit as base (no changes detected)
@@ -45,7 +52,7 @@ jobs:
           echo "Base commit: $BASE_COMMIT"
           
           # Get list of changed files since base
-          CHANGED_FILES=$(git diff --name-only $BASE_COMMIT HEAD -- plugins/ 2>/dev/null || echo "")
+          CHANGED_FILES=$(git diff --name-only "$BASE_COMMIT" HEAD -- plugins/ 2>/dev/null || echo "")
           echo "Changed files: $CHANGED_FILES"
           
           # Find which plugins have changes
@@ -62,7 +69,22 @@ jobs:
           
           # Check for manual trigger
           if [ -n "${{ github.event.inputs.plugin }}" ]; then
-            CHANGED_PLUGINS="${{ github.event.inputs.plugin }}"
+            MANUAL_PLUGINS="${{ github.event.inputs.plugin }}"
+            CHANGED_PLUGINS=""
+            for plugin in $(echo "$MANUAL_PLUGINS" | tr ',' ' '); do
+              plugin=$(echo "$plugin" | xargs)
+              if [ -z "$plugin" ]; then
+                continue
+              fi
+              if [ -z "$CHANGED_PLUGINS" ]; then
+                CHANGED_PLUGINS="$plugin"
+              else
+                CHANGED_PLUGINS="$CHANGED_PLUGINS,$plugin"
+              fi
+            done
+          elif [ "${{ github.event.inputs.force }}" = "true" ]; then
+            CHANGED_PLUGINS="$PLUGINS"
+            echo "Force publish enabled: publishing all configured plugins"
           fi
           
           if [ -z "$CHANGED_PLUGINS" ]; then
@@ -147,4 +169,9 @@ jobs:
     if: needs.detect-changes.outputs.changed_plugins == 'none'
     steps:
       - name: No changes
-        run: echo "No plugin changes detected, skipping publish"
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "No plugins selected. Set 'plugin' or enable 'force' to publish manually."
+          else
+            echo "No plugin changes detected, skipping publish"
+          fi
