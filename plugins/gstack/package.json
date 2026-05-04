@@ -1,6 +1,6 @@
 {
   "name": "opencode-plugin-gstack",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "GStack - Virtual software engineering team with specialized AI skills for OpenCode",
   "main": "index.ts",
   "types": "index.ts",
