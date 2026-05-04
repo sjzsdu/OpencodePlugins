@@ -108,18 +108,18 @@ jobs:
           for plugin in $(echo "$CHANGED" | tr ',' ' '); do
             echo "=== Publishing $plugin ==="
             
-            PLUGIN_PATH=$(node -p "require('./publish.config.json').plugins['$plugin'].path")
+            PLUGIN_PATH=$(node -p "const config=require('./publish.config.json'); const plugin=config.plugins['$plugin']; if (!plugin) { throw new Error('Unknown plugin: $plugin'); } plugin.path")
             
             # Get current version
             CURRENT=$(node -p "require('./$PLUGIN_PATH/package.json').version")
             echo "Current version: $CURRENT"
             
             # Bump version
-            NEW=$(node -p "const v='$CURRENT'.split('.');v[2]=(parseInt(v[2])+1).toString();console.log(v.join('.'))")
+            NEW=$(node -p "const [major, minor, patch] = '$CURRENT'.split('.').map(Number); [major, minor, patch + 1].join('.')")
             echo "New version: $NEW"
             
-            # Update package.json
-            node -p "const p=require('./$PLUGIN_PATH/package.json');p.version='$NEW';JSON.stringify(p,null,2)" > "$PLUGIN_PATH/package.json"
+            # Update package.json safely
+            node -e "const fs=require('fs'); const path='./$PLUGIN_PATH/package.json'; const p=JSON.parse(fs.readFileSync(path,'utf8')); p.version='$NEW'; fs.writeFileSync(path, JSON.stringify(p, null, 2) + '\n');"
             
             # Commit version bump
             git config --local user.email "github-actions[bot]@users.noreply.github.com"
@@ -133,11 +133,10 @@ jobs:
             git push origin "$plugin-v$NEW"
             
             # Publish to npm
-            cd "$PLUGIN_PATH"
-            echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
-            npm config set provenance true
-            npm publish --access public
-            cd ..
+            printf '//registry.npmjs.org/:_authToken=%s\n' "${{ secrets.NPM_TOKEN }}" > "$PLUGIN_PATH/.npmrc"
+            npm --prefix "$PLUGIN_PATH" config set provenance true
+            npm --prefix "$PLUGIN_PATH" publish --access public
+            rm -f "$PLUGIN_PATH/.npmrc"
             
             echo "✅ Published $plugin v$NEW"
           done
