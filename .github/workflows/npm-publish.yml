@@ -154,11 +154,14 @@ jobs:
             git tag "$plugin-v$NEW"
             git push origin "$plugin-v$NEW"
             
-            # Publish to npm
-            printf '//registry.npmjs.org/:_authToken=%s\n' "${{ secrets.NPM_TOKEN }}" > "$PLUGIN_PATH/.npmrc"
-            npm --prefix "$PLUGIN_PATH" config set provenance true
-            npm --prefix "$PLUGIN_PATH" publish --access public
-            rm -f "$PLUGIN_PATH/.npmrc"
+            # Publish to npm in plugin directory
+            (
+              cd "$PLUGIN_PATH"
+              printf '//registry.npmjs.org/:_authToken=%s\n' "${{ secrets.NPM_TOKEN }}" > .npmrc
+              npm config set provenance true
+              npm publish --access public
+              rm -f .npmrc
+            )
             
             echo "✅ Published $plugin v$NEW"
           done
