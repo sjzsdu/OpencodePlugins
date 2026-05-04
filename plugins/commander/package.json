@@ -1,6 +1,6 @@
 {
   "name": "opencode-plugin-commander",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Commander — 4-agent orchestration plugin for OpenCode",
   "main": "index.ts",
   "types": "index.ts",
