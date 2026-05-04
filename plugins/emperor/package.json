@@ -1,6 +1,6 @@
 {
   "name": "opencode-plugin-emperor",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Emperor — 三省六部多智能体协作系统 OpenCode 插件",
   "main": "index.ts",
   "types": "index.ts",
