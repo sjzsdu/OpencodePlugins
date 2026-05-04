@@ -1,6 +1,6 @@
 {
   "name": "opencode-plugin-docs",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Docs — 代码逆向文档生成插件，PRD、架构图、UML、流程图、ER图、MermaidJS图表",
   "main": "index.ts",
   "types": "index.ts",
