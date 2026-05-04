@@ -1,6 +1,6 @@
 {
   "name": "opencode-plugin-code-context",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Code Context — 代码结构化分析插件，基于 tree-sitter 的代码索引和检索系统",
   "main": "index.ts",
   "types": "index.ts",
