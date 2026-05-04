@@ -142,6 +142,7 @@ jobs:
           done
 
   no-changes:
+    needs: detect-changes
     runs-on: ubuntu-latest
     if: needs.detect-changes.outputs.changed_plugins == 'none'
     steps:
