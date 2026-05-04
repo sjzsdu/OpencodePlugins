@@ -1,6 +1,6 @@
 {
   "name": "opencode-plugin-hive",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Hive — Dynamic domain-agent coordination plugin for OpenCode",
   "main": "index.ts",
   "types": "index.ts",
