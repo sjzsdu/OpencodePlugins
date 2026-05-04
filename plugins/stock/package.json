@@ -1,6 +1,6 @@
 {
   "name": "opencode-plugin-stock",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Stock — 单入口 A 股分析插件，动态维度路由 + 概率化投资分析 + HTML 报告生成",
   "main": "index.ts",
   "types": "index.ts",
